@@ -223,7 +223,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.1.0";
+	const VERSION = "0.2.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -235,6 +235,10 @@
 	// concurrencia pequeña + espaciado de arranque ~3.3 req/s, dejando margen bajo
 	// el límite, y se adapta a las cabeceras X-Rate-Limit-Remaining / Retry-After.
 	const REQUEST_SPACING_MS = 300;  // intervalo mínimo entre arranques (~3.3 req/s)
+	// Cross-origin (multi-sitio sin proxy): cada petición dispara un preflight
+	// OPTIONS (cabecera Authorization) que TAMBIÉN consume un token del rate-limit.
+	// Se dobla el espaciado para que preflight + GET sumen ~3.3 req/s y no haya 429.
+	const REQUEST_SPACING_CROSS_ORIGIN = REQUEST_SPACING_MS * 2;
 	const MAX_CONCURRENCY = 2;       // peticiones en vuelo simultáneas
 	const DEVICE_LABELS = { phone: "device.phone", tablet: "device.tablet", desktop: "device.desktop", desktophd: "device.desktophd", unknown: "device.unknown" };
 
@@ -242,7 +246,7 @@
  	let config = null;        // { baseURL, apiKey, me }
  	let demoMode = false;
  	let demoPreset = "30d";
- 	let currentSite = null;   // X-Goatcounter-Site selector: cname or null (Host)
+ 	let currentSite = null;   // selector de sitio: cname o null (cuenta/Host)
  	let sitesList = [];       // [{id, cname}] from /api/v0/sites
 	let theme = localStorage.getItem(THEME_KEY) || "dark";
 	let currentPreset = "30d";
@@ -392,7 +396,8 @@
 		constructor(baseURL, apiKey) {
 			this.baseURL = baseURL.replace(/\/+$/, "");
 			this.apiKey = apiKey;
-			this.site = null; // optional X-Goatcounter-Site (sub)site selector
+			this.siteBaseURL = null; // base del sitio activo (https://<cname>) o null = cuenta (baseURL)
+			this._knownBases = new Set([this.baseURL]); // bases vistas, para limpiar toda la caché de la conexión
 			this._inflight = 0;      // peticiones en vuelo (semáforo de concurrencia)
 			this._waitersHigh = [];  // cola de espera prioritaria (interacción)
 			this._waitersLow = [];   // cola de espera en segundo plano (precache)
@@ -401,19 +406,33 @@
 			this._resetAt = 0;       // cuándo se rellena el límite (ms epoch)
 		}
 
-		static clearCache(baseURL) {
-			const prefix = CACHE_PREFIX + baseURL + ":";
+		clearCache() {
+			// Limpia la caché de la cuenta (baseURL) y de todos los subsitios ya
+			// cacheados (sus cnames). La clave incluye el prefijo de URL completo.
 			const keys = [];
 			for (let i = 0; i < localStorage.length; i++) {
 				const k = localStorage.key(i);
-				if (k && k.startsWith(prefix)) keys.push(k);
+				if (!k || !k.startsWith(CACHE_PREFIX)) continue;
+				if ([...this._knownBases].some((b) => k.startsWith(CACHE_PREFIX + b + ":"))) keys.push(k);
 			}
 			keys.forEach((k) => localStorage.removeItem(k));
 		}
 
+		// Resuelve la base de URL para un endpoint. `site`:
+		//  - cname: subsitio concreto (precache) -> https://<cname>
+		//  - null:  cuenta, siempre contra baseURL (/me, /sites)
+		//  - undefined: sitio activo (siteBaseURL) o, si no hay, la cuenta.
+		_baseFor(site) {
+			let base;
+			if (site === null) base = this.baseURL;
+			else if (site) base = "https://" + site;
+			else base = this.siteBaseURL || this.baseURL;
+			this._knownBases.add(base);
+			return base;
+		}
+
 		_cacheKey(endpoint, site) {
-			const s = site === undefined ? this.site : site;
-			return CACHE_PREFIX + this.baseURL + ":" + (s || "") + ":" + endpoint;
+			return CACHE_PREFIX + this._baseFor(site) + ":" + endpoint;
 		}
 
 		_readCache(endpoint, site) {
@@ -434,8 +453,7 @@
 
 		async _fetchOnce(endpoint, site) {
 			const headers = { Authorization: "Bearer " + this.apiKey };
-			if (site) headers["X-Goatcounter-Site"] = site;
-			const res = await fetch(this.baseURL + endpoint, { headers });
+			const res = await fetch(this._baseFor(site) + endpoint, { headers });
 			this._observeRate(res);
 			if (res.status === 401) {
 				const err = new Error(t("err.401")); err.kind = "auth"; throw err;
@@ -493,13 +511,13 @@
 			if (next) next();
 		}
 
-		async _space() {
+		async _space(spacing) {
 			// Reserva atómicamente el siguiente turno de arranque ANTES de dormir,
 			// para que peticiones concurrentes no lean el mismo instante.
 			const now = Date.now();
 			let start = Math.max(this._nextStart, now);
 			if (this._remaining === 0 && this._resetAt > start) start = this._resetAt;
-			this._nextStart = start + REQUEST_SPACING_MS;
+			this._nextStart = start + spacing;
 			const wait = start - Date.now();
 			if (wait > 0) await new Promise((r) => setTimeout(r, wait));
 		}
@@ -510,22 +528,22 @@
 		}
 
 		async request(endpoint, { retries = 2, forceRefresh = false, site, priority = "high", signal } = {}) {
-			const s = site === undefined ? this.site : site;
 			if (!forceRefresh) {
-				const cached = this._readCache(endpoint, s);
+				const cached = this._readCache(endpoint, site);
 				if (cached !== null) return cached;
 			}
 			if (signal && signal.cancelled) return null;
 			await this._acquire(priority);
 			try {
 				if (signal && signal.cancelled) return null;
-				await this._space();
+				const crossOrigin = this._baseFor(site) !== location.origin;
+				await this._space(crossOrigin ? REQUEST_SPACING_CROSS_ORIGIN : REQUEST_SPACING_MS);
 				if (signal && signal.cancelled) return null;
 				let lastErr;
 				for (let attempt = 0; attempt <= retries; attempt++) {
 					try {
-						const data = await this._fetchOnce(endpoint, s);
-						this._writeCache(endpoint, data, s);
+						const data = await this._fetchOnce(endpoint, site);
+						this._writeCache(endpoint, data, site);
 						return data;
 					} catch (e) {
 						lastErr = e;
@@ -1392,7 +1410,7 @@
 	async function loadSiteSelector() {
 		if (demoMode || !client) { renderSidebar(); return; }
 		try {
-			const data = await client.request("/api/v0/sites", { forceRefresh: true });
+			const data = await client.request("/api/v0/sites", { forceRefresh: true, site: null });
 			sitesList = (data && data.sites) || [];
 		} catch {
 			sitesList = [];
@@ -1434,7 +1452,7 @@
 
 	function onSiteChange(cname) {
 		currentSite = cname || null;
-		if (client) client.site = currentSite;
+		if (client) client.siteBaseURL = currentSite ? "https://" + currentSite : null;
 		if (config) {
 			config.site = currentSite;
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
@@ -1504,7 +1522,7 @@
 		$("#custom-start").addEventListener("change", onCustomChange);
 		$("#custom-end").addEventListener("change", onCustomChange);
 		$("#refresh-btn").addEventListener("click", () => {
-			if (config && !demoMode) APIClient.clearCache(config.baseURL);
+			if (client && !demoMode) client.clearCache();
 			refreshTick++;
 			loadData();
 		});
@@ -1797,7 +1815,7 @@
 	}
 
 	function disconnect(msg) {
-		if (config) APIClient.clearCache(config.baseURL);
+		if (client) client.clearCache();
 		localStorage.removeItem(STORAGE_KEY);
 		config = null; demoMode = false; currentSite = null; sitesList = [];
 		$("#dash-screen").hidden = true;
@@ -1833,7 +1851,7 @@
 				const me = await c.request("/api/v0/me", { retries: 1 });
 				config = { baseURL, apiKey: keyRaw, me };
 				currentSite = config.site || null;
-				c.site = currentSite;
+				c.siteBaseURL = currentSite ? "https://" + currentSite : null;
 				client = c;
 				localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 				demoMode = false;
@@ -1943,7 +1961,7 @@
 					config = cfg;
 					currentSite = cfg.site || null;
 					client = new APIClient(cfg.baseURL, cfg.apiKey);
-					client.site = currentSite;
+					client.siteBaseURL = currentSite ? "https://" + currentSite : null;
 					demoMode = false;
 					loadDashboard();
 					return;
