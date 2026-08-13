@@ -7,7 +7,7 @@
 
 <p align="center">
   <a href="https://stats.cloudless.club"><img alt="Demo en vivo" src="https://img.shields.io/badge/live%20demo-stats.cloudless.club-2b5884"></a>
-  <a href="LICENSE"><img alt="Licencia: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="LICENSE"><img alt="Licencia: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 
 ## ¿Por qué este stack?
 
-- **Vanilla JS, sin framework, sin CDN**: el original cargaba React, Recharts y Babel desde unpkg. Para una página que lee una API JSON y pinta un par de gráficas, ese es peso que no necesita. Seis ficheros estáticos, nada que compilar, nada que se rompa cuando un CDN cambia de versión.
+- **Vanilla JS, sin framework, sin CDN**: el original cargaba React, Recharts y Babel desde unpkg. Para una página que lee una API JSON y pinta un par de gráficas, ese es peso que no necesita. Siete ficheros estáticos, nada que compilar, nada que se rompa cuando un CDN cambia de versión.
 - **Sin backend propio**: goatdash habla con la API de GoatCounter directamente desde el navegador. No hay servidor que parchear, ni base de datos que respaldar, ni servicio que mantener vivo. Desplegar es copiar ficheros.
 - **GoatCounter como backend**: un único binario ligero con SQLite, privacy-first por diseño y trivial de autohospedar. La API v0 ya expone todo lo que muestra el dashboard: totales, páginas, referrers, navegadores, sistemas, tamaños, ubicaciones, idiomas y campañas.
 - **Sin patch de backend para el multi-sitio**: GoatCounter resuelve el sitio con el header Host, así que cada sitio vive en su propio dominio y el dashboard lo consulta allí. Un dominio por sitio, todos apuntando al mismo GoatCounter. El binario oficial lo hace todo.
@@ -43,9 +43,10 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 - **Drill en cada tarjeta**: de páginas a sus referrers, de navegadores/sistemas/dispositivos a versiones, de países a regiones, de campañas a sus URLs de referrer.
 - **Mapa mundial coroplético**: países sombreados por visitas con escala de raíz cuadrada para que los mercados pequeños sigan visibles, tooltips y leyenda con degradado.
 - **Rangos flexibles**: hoy, 7d, 30d, 90d o un rango personalizado con fecha de inicio y fin.
-- **Tema tri-estado con anti-FOUC**: oscuro, claro o auto, conmutado con iconos de sol/luna/monitor en la topbar y aplicado antes de pintar por un `theme.js` externo que funciona con un CSP estricto `default-src 'self'`.
+- **Tema tri-estado con anti-FOUC**: oscuro, claro o auto, conmutado en la topbar (botones con texto, solo iconos en móvil) y aplicado antes de pintar por un `theme.js` externo que funciona con un CSP estricto `default-src 'self'`.
+- **Recargas instantáneas**: un service worker diminuto sirve el shell de la app desde el navegador (HTML network-first para que siempre te llegue la versión desplegada, assets versionados cache-first), y las respuestas de la API se cachean por rango con stale-while-revalidate, así que una recarga pinta en milisegundos incluso con una conexión lenta.
 - **Idioma**: UI en ES/EN/Auto, persistida en localStorage.
-- **Menú Ajustes con Acerca de**: el menú de engranaje abre Acerca de, que muestra la versión (0.2.0) y un enlace al código fuente.
+- **Menú Ajustes con Acerca de**: el menú de engranaje abre Acerca de, que muestra la versión (0.3.1) y un enlace al código fuente.
 - **Usuario conectado en la topbar**: un chip con tu avatar y tu email desde `/api/v0/me`.
 - **Modo demo**: un clic carga el dashboard completo con datos de ejemplo realistas, sin necesidad de API key.
 - **Respeto a la API**: caché de respuesta de 60 segundos, un cliente concurrente pequeño que lee `X-Rate-Limit-Remaining` y `Retry-After` y se adapta para no superar nunca el límite del servidor, reintento por tarjeta e indicador de "actualizado hace Xs".
@@ -78,7 +79,7 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 
 ## ¿Qué debes esperar?
 
-Es un proyecto personal que uso a diario, no un producto. Sigue siendo MIT y contesto issues y PRs a mi ritmo, sin SLA. Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada.
+Es un proyecto personal que uso a diario, no un producto. Es AGPL-3.0 y contesto issues y PRs a mi ritmo, sin SLA. Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada.
 
 ## Instalación
 
@@ -140,7 +141,7 @@ Pulsa casi cualquier cosa para hacer drill: una página muestra sus referrers, u
 
 ## Desarrollo
 
-goatdash es HTML, CSS y JavaScript planos, repartidos entre `index.html`, `styles.css`, `theme.js`, `app.js` y `fixtures.js`. Sin package.json, sin bundler, sin harness de tests en el repo; los datos de demo viven en `fixtures.js` y reflejan la forma real de las respuestas de la API.
+goatdash es HTML, CSS y JavaScript planos, repartidos entre `index.html`, `styles.css`, `theme.js`, `app.js`, `fixtures.js` y `sw.js`. Sin package.json, sin bundler, sin harness de tests en el repo; los datos de demo viven en `fixtures.js` y reflejan la forma real de las respuestas de la API.
 
 ```sh
 # Sirve el repo y abre http://localhost:8000
@@ -155,6 +156,6 @@ goatdash no se vería como se ve sin el [goatcounter-dashboard de Abhishekh Sing
 
 ## Licencia
 
-MIT, ver [LICENSE](LICENSE). El LICENSE conserva el aviso de copyright original del goatcounter-dashboard de Abhishekh Singh, sobre el que se construye goatdash.
+AGPL-3.0, ver [LICENSE](LICENSE). El asset del mapa mundial (`assets/world-map.js`) se conserva tal cual del proyecto MIT de Abhishekh Singh y sigue siendo MIT; su aviso vive en [LICENSE.world-map](LICENSE.world-map).
 
 Construido por gnacho como proyecto personal autohospedado; issues y PRs son bienvenidos.
