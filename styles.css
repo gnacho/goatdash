@@ -738,7 +738,8 @@ body { min-height: 100vh; }
 .map-wrap path[data-has="0"] { fill: var(--chart-grid); }
 .map-wrap path[data-has="1"]:hover, .map-wrap path.map-selected { stroke: var(--accent-hover); stroke-width: 1.5; }
 .map-legend { display: flex; align-items: center; gap: 6px; justify-content: center; padding: 8px 0 0; font-size: 0.72rem; color: var(--text-muted); }
-.map-legend .lg-swatch { width: 40px; height: 6px; border-radius: 3px; }
+.map-legend .lg-min { opacity: 0.3; }
+.map-legend .lg-swatch { width: 40px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 25%, transparent), var(--accent)); }
 
 /* ---------- About dialog ---------- */
 .about-dialog {

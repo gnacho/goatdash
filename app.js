@@ -1161,7 +1161,7 @@
 		wrap.appendChild(svg);
 		const legend = document.createElement("div");
 		legend.className = "map-legend";
-		legend.innerHTML = `<span style="opacity:0.3">${fmtNum(maxCount / 8)}</span><span class="lg-swatch" style="background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 25%,transparent),var(--accent))"></span><span>${fmtNum(maxCount)}</span>`;
+		legend.innerHTML = `<span class="lg-min">${fmtNum(maxCount / 8)}</span><span class="lg-swatch"></span><span>${fmtNum(maxCount)}</span>`;
 		wrap.appendChild(legend);
 		container.appendChild(wrap);
 	}
