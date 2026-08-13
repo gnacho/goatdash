@@ -6,6 +6,19 @@
 <title>Goatdash</title>
 <meta name="description" content="A privacy-friendly dashboard for GoatCounter analytics. No cookies, no tracking, no servers.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b5884'/%3E%3Cpath d='M11 21V9h2v10h3V7h2v12h3V9h2v12z' fill='white' transform='translate(-1 1)'/%3E%3C/svg%3E">
+<script>
+/* Anti-FOUC: aplica el tema antes de cargar styles.css.
+   Modo: "dark" | "light" | "auto". Ausente → dark (default retrocompatible). */
+(function () {
+	var mode = null;
+	try { mode = localStorage.getItem("gc-dashboard-theme-v1"); } catch (e) {}
+	var resolved;
+	if (mode === "light" || mode === "dark") resolved = mode;
+	else if (mode === "auto") resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+	else resolved = "dark";
+	document.documentElement.setAttribute("data-theme", resolved);
+})();
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,7 +29,14 @@
 				<div class="brand-mark">G</div>
 				<div class="brand-name">Goatdash</div>
 			</div>
-			<button id="lang-toggle" class="lang-btn" title="Switch language">ES/EN</button>
+			<div class="lang-wrap">
+				<button id="lang-toggle" class="lang-btn" title="Language" aria-haspopup="true" aria-expanded="false">Español</button>
+				<div id="lang-toggle-menu" class="submenu" role="radiogroup" aria-label="Language" hidden>
+					<button type="button" class="submenu-item" role="radio" data-lang-option="es" aria-checked="false">Español</button>
+					<button type="button" class="submenu-item" role="radio" data-lang-option="en" aria-checked="false">English</button>
+					<button type="button" class="submenu-item" role="radio" data-lang-option="auto" aria-checked="false">Auto</button>
+				</div>
+			</div>
 		</header>
 		<main class="connect-main">
 			<div class="connect-card">
@@ -71,8 +91,18 @@
 					<button id="menu-btn" class="icon-btn" title="Settings" aria-haspopup="true" aria-expanded="false">⚙</button>
 					<div id="menu" class="menu" hidden>
 						<button id="refresh-btn" class="menu-item" data-i18n="menu.refresh">↻ Actualizar datos</button>
-						<button id="theme-btn" class="menu-item" data-i18n="menu.theme">Tema: Oscuro</button>
-						<button id="lang-btn" class="menu-item" data-i18n="menu.lang">Idioma: Español</button>
+						<button id="theme-btn" class="menu-item" aria-haspopup="true" aria-expanded="false">Tema: Oscuro</button>
+						<div id="theme-menu" class="submenu" role="radiogroup" aria-label="Theme" hidden>
+							<button type="button" class="submenu-item" role="radio" data-theme-option="dark" aria-checked="false" data-i18n="theme.dark">Oscuro</button>
+							<button type="button" class="submenu-item" role="radio" data-theme-option="light" aria-checked="false" data-i18n="theme.light">Claro</button>
+							<button type="button" class="submenu-item" role="radio" data-theme-option="auto" aria-checked="false" data-i18n="theme.auto">Auto</button>
+						</div>
+						<button id="lang-btn" class="menu-item" aria-haspopup="true" aria-expanded="false">Idioma: Español</button>
+						<div id="lang-menu" class="submenu" role="radiogroup" aria-label="Language" hidden>
+							<button type="button" class="submenu-item" role="radio" data-lang-option="es" aria-checked="false">Español</button>
+							<button type="button" class="submenu-item" role="radio" data-lang-option="en" aria-checked="false">English</button>
+							<button type="button" class="submenu-item" role="radio" data-lang-option="auto" aria-checked="false">Auto</button>
+						</div>
 						<button id="disconnect-btn" class="menu-item danger" data-i18n="menu.disconnect">Desconectar</button>
 					</div>
 				</div>

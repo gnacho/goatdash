@@ -32,6 +32,7 @@
 	--shadow: 0 1px 3px rgba(0,0,0,0.4);
 	--input-bg: #0d1117;
 	--input-border: #30363d;
+	color-scheme: dark;
 }
 
 :root[data-theme="light"] {
@@ -52,6 +53,7 @@
 	--shadow: 0 1px 3px rgba(0,0,0,0.08);
 	--input-bg: #ffffff;
 	--input-border: #d0d7de;
+	color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -573,6 +575,48 @@ body { min-height: 100vh; }
 	cursor: pointer;
 }
 .lang-btn:hover { background: var(--bg-elev2); }
+
+/* ---------- Theme / Lang submenus ---------- */
+.submenu {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 4px;
+	margin: 2px 0;
+	background: var(--bg-elev2);
+	border: 1px solid var(--border);
+	border-radius: 7px;
+}
+.submenu-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: transparent;
+	border: 0;
+	color: var(--text-muted);
+	font: inherit;
+	font-size: 0.85rem;
+	padding: 7px 10px;
+	border-radius: 5px;
+	cursor: pointer;
+}
+.submenu-item:hover { background: var(--bg-elev); color: var(--text); }
+.submenu-item.active {
+	background: color-mix(in srgb, var(--accent) 18%, transparent);
+	color: var(--text);
+	font-weight: 600;
+}
+.lang-wrap { position: relative; }
+.lang-wrap .submenu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 6px);
+	min-width: 150px;
+	z-index: 30;
+	margin: 0;
+	background: var(--bg-elev);
+	box-shadow: var(--shadow);
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
