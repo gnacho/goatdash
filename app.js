@@ -1419,10 +1419,11 @@
 	}
 
 	// --------------------------------------------------------------- precache
-	// Tras cargar el sitio activo, rellena en segundo plano la caché del resto de
-	// sitios del sidebar (mismo conjunto de endpoints, sin renderizar) para que el
-	// cambio de sitio sea instantáneo. Baja prioridad y cancelable: si el usuario
-	// cambia de sitio, se para y el sitio clicado pasa a la cola prioritaria.
+	// Tras cargar el sitio activo, precalienta en segundo plano SOLO los endpoints
+	// esenciales (total + hits del rango actual) del resto de sitios del sidebar,
+	// para que el cambio de sitio sea rápido sin saturar el rate-limit. Baja
+	// prioridad y cancelable: si el usuario cambia de sitio, se para y el sitio
+	// clicado pasa a la cola prioritaria.
 	let precacheToken = null;
 
 	async function precacheSites() {
@@ -1431,7 +1432,10 @@
 		const token = { cancelled: false };
 		precacheToken = token;
 		const range = getDateRange(currentPreset, customStart, customEnd);
-		const urls = Object.values(buildEndpointSet(range));
+		// Solo lo esencial (KPIs + gráfico). Las mismas URLs que usa loadData,
+		// así el precache rellena exactamente las mismas claves de caché.
+		const eps = buildEndpointSet(range);
+		const urls = [eps.total, eps.hits];
 		const root = sitesList.find((s) => !s.parent);
 		const active = currentSite || (root ? root.cname : "");
 		const targets = sitesList
@@ -1580,28 +1584,37 @@
 		// real mode
 		try {
 			const eps = buildEndpointSet(range);
-			const [totalRes, hitsRes, prevRes, langRes, refRes] = await Promise.allSettled([
+			// Fase crítica: KPIs + gráfico + páginas, solo con total + hits. Para un
+			// sitio precacheado ambas están en caché y el cambio de sitio es inmediato.
+			const [totalRes, hitsRes] = await Promise.allSettled([
 				client.request(eps.total),
 				client.request(eps.hits),
+			]);
+			if (current.cancelled) return;
+			if (totalRes.status === "rejected" && totalRes.reason.kind === "auth") return handleAuthError(totalRes.reason.message);
+			if (hitsRes.status === "rejected" && hitsRes.reason.kind === "auth") return handleAuthError(hitsRes.reason.message);
+			progress.fired = 5; progress.done = 2;
+
+			data = {
+				total: totalRes.status === "fulfilled" ? totalRes.value : { total: 0 },
+				hits: hitsRes.status === "fulfilled" ? hitsRes.value : { hits: [] },
+			};
+			renderKPIs(data, null, group);
+			renderTrafficChart(data, group);
+			renderPages(data.hits.hits);
+			lastUpdatedAt = Date.now();
+
+			// Fase secundaria: tendencia (periodo anterior), idiomas y referencias.
+			const [prevRes, langRes, refRes] = await Promise.allSettled([
 				client.request(eps.prev),
 				client.request(eps.languages),
 				client.request(eps.toprefs),
 			]);
 			if (current.cancelled) return;
-			progress.fired = 5; progress.done = 5;
-
-			data = {
-				total: totalRes.status === "fulfilled" ? totalRes.value : { total: 0 },
-				hits: hitsRes.status === "fulfilled" ? hitsRes.value : { hits: [] },
-				languages: langRes.status === "fulfilled" ? langRes.value : { stats: [] },
-			};
-			if (totalRes.status === "rejected" && totalRes.reason.kind === "auth") return handleAuthError(totalRes.reason.message);
-			if (hitsRes.status === "rejected" && hitsRes.reason.kind === "auth") return handleAuthError(hitsRes.reason.message);
+			progress.done = 5;
+			data.languages = langRes.status === "fulfilled" ? langRes.value : { stats: [] };
 			prevTotal = prevRes.status === "fulfilled" ? (prevRes.value.total ?? prevRes.value.total_utc ?? null) : null;
-
 			renderKPIs(data, prevTotal, group);
-			renderTrafficChart(data, group);
-			renderPages(data.hits.hits);
 			renderLanguages(data.languages.stats);
 			renderReferrers(refRes.status === "fulfilled" ? refRes.value.stats : [], null);
 			lastUpdatedAt = Date.now();
