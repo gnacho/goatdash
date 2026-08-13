@@ -225,7 +225,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.3.1";
+	const VERSION = "0.3.2";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -2063,9 +2063,22 @@
 
 	document.addEventListener("DOMContentLoaded", boot);
 
-	// Service worker: shell desde caché => recarga inmediata. El HTML es
-	// network-first (nunca versión vieja con red) y los assets ?v=N cache-first.
+	// Service worker: shell desde caché => recarga inmediata. El HTML se sirve
+	// stale-while-revalidate; si el SW detecta una versión nueva en background
+	// nos avisa y nos recargamos UNA vez (guard por pestaña contra bucles).
 	if ("serviceWorker" in navigator) {
 		navigator.serviceWorker.register("sw.js").catch(() => { /* sin SW: funciona igual, solo más lento */ });
+		navigator.serviceWorker.addEventListener("message", (ev) => {
+			const d = ev.data || {};
+			const update = d.type === "sw-updated" || (d.type === "version-check" && d.changed);
+			if (update && !sessionStorage.getItem("gc-sw-reloaded")) {
+				sessionStorage.setItem("gc-sw-reloaded", "1");
+				location.reload();
+			}
+		});
+		// Al arrancar: ¿hay una versión nueva desplegada? (pregunta al SW)
+		navigator.serviceWorker.ready
+			.then((reg) => { if (reg.active) reg.active.postMessage({ type: "version-check" }); })
+			.catch(() => {});
 	}
 })();
