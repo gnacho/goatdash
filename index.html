@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goatdash</title>
+<meta name="description" content="A privacy-friendly dashboard for GoatCounter analytics. No cookies, no tracking, no servers.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b5884'/%3E%3Cpath d='M11 21V9h2v10h3V7h2v12h3V9h2v12z' fill='white' transform='translate(-1 1)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+	<div id="connect-screen" class="connect" hidden>
+		<header class="connect-head">
+			<div class="brand">
+				<div class="brand-mark">G</div>
+				<div class="brand-name">Goatdash</div>
+			</div>
+			<button id="lang-toggle" class="lang-btn" title="Switch language">ES/EN</button>
+		</header>
+		<main class="connect-main">
+			<div class="connect-card">
+				<h1 class="connect-title" data-i18n="connect.title">Analytics sin mirar a nadie.</h1>
+				<p class="connect-sub" data-i18n="connect.sub">Conecta tu instancia de GoatCounter y ve tus estadísticas en una interfaz limpia. Sin cookies, sin scripts de terceros, sin servidor.</p>
+				<form id="connect-form" novalidate>
+					<div class="field">
+						<label for="gc-url" data-i18n="connect.url">URL de GoatCounter</label>
+						<input type="text" id="gc-url" autocomplete="url" placeholder="https://stats.cloudless.club" spellcheck="false">
+					</div>
+					<div class="field">
+						<label for="gc-key" data-i18n="connect.key">API key</label>
+						<input type="password" id="gc-key" autocomplete="off" spellcheck="false" placeholder="••••••••••••••••">
+					</div>
+					<div id="connect-error" class="form-error" hidden></div>
+					<button type="submit" id="connect-btn" class="btn-primary" data-i18n="connect.connect">Conectar →</button>
+					<div class="or" data-i18n="connect.or">o</div>
+					<button type="button" id="demo-btn" class="btn-secondary" data-i18n="connect.demo">Probar demo →</button>
+				</form>
+				<details class="help-box">
+					<summary data-i18n="connect.helpTitle">¿Cómo creo una API key?</summary>
+					<p data-i18n="connect.helpBody">En tu instancia de GoatCounter: tu usuario (arriba a la derecha) → Settings → pestaña API → Create key. Dale permisos «Count & Read» y copia la clave.</p>
+				</details>
+			</div>
+		</main>
+	</div>
+
+	<div id="dash-screen" hidden>
+		<header class="topbar">
+			<div class="topbar-left">
+				<div class="brand small">
+					<div class="brand-mark small">G</div>
+					<div class="site-name" id="site-name"></div>
+				</div>
+				<select id="site-select" class="site-select" title="Site" hidden aria-label="Site"></select>
+				<nav class="seg" id="range-seg" role="tablist">
+					<button role="tab" data-preset="today" class="seg-btn" data-i18n="range.today">Hoy</button>
+					<button role="tab" data-preset="7d" class="seg-btn seg-active" data-i18n="range.d7">7d</button>
+					<button role="tab" data-preset="30d" class="seg-btn" data-i18n="range.d30">30d</button>
+					<button role="tab" data-preset="90d" class="seg-btn" data-i18n="range.d90">90d</button>
+					<button role="tab" data-preset="custom" class="seg-btn" data-i18n="range.custom">Personalizado</button>
+				</nav>
+				<div class="custom-range" id="custom-range" hidden>
+					<input type="date" id="custom-start" aria-label="Start date">
+					<span class="range-arrow">→</span>
+					<input type="date" id="custom-end" aria-label="End date">
+				</div>
+			</div>
+			<div class="topbar-right">
+				<span class="freshness" id="freshness"></span>
+				<div class="menu-wrap">
+					<button id="menu-btn" class="icon-btn" title="Settings" aria-haspopup="true" aria-expanded="false">⚙</button>
+					<div id="menu" class="menu" hidden>
+						<button id="refresh-btn" class="menu-item" data-i18n="menu.refresh">↻ Actualizar datos</button>
+						<button id="theme-btn" class="menu-item" data-i18n="menu.theme">Tema: Oscuro</button>
+						<button id="lang-btn" class="menu-item" data-i18n="menu.lang">Idioma: Español</button>
+						<button id="disconnect-btn" class="menu-item danger" data-i18n="menu.disconnect">Desconectar</button>
+					</div>
+				</div>
+			</div>
+		</header>
+
+		<div id="demo-banner" class="demo-banner" hidden>
+			<span id="demo-banner-text" data-i18n="demo.banner">📊 Viendo datos de demo · Conecta tu GoatCounter para ver analítica real</span>
+			<button id="demo-connect" class="btn-link" data-i18n="demo.connect">Conectar →</button>
+		</div>
+
+		<div id="error-banner" class="error-banner" hidden></div>
+
+		<main class="dashboard" id="dashboard">
+			<div class="grid-kpis" id="grid-kpis"></div>
+			<div class="chart-wrap card" id="traffic-card">
+				<div class="card-head">
+					<h2 data-i18n="card.traffic">Visitantes en el tiempo</h2>
+				</div>
+				<div class="chart-body" id="traffic-body"></div>
+			</div>
+			<div class="grid-7-3">
+				<div class="card" id="pages-card">
+					<div class="card-head">
+						<h2 data-i18n="card.pages">Páginas principales</h2>
+					</div>
+					<div class="card-body" id="pages-body"></div>
+				</div>
+				<div class="card" id="languages-card">
+					<div class="card-head">
+						<h2 data-i18n="card.languages">Idiomas</h2>
+					</div>
+					<div class="card-body" id="languages-body"></div>
+				</div>
+			</div>
+			<div class="grid-3" id="donut-row">
+				<div class="card" id="browsers-card">
+					<div class="card-head"><h2 data-i18n="card.browsers">Navegadores</h2></div>
+					<div class="card-body" id="browsers-body"></div>
+				</div>
+				<div class="card" id="systems-card">
+					<div class="card-head"><h2 data-i18n="card.systems">Sistemas</h2></div>
+					<div class="card-body" id="systems-body"></div>
+				</div>
+				<div class="card" id="sizes-card">
+					<div class="card-head"><h2 data-i18n="card.devices">Dispositivos</h2></div>
+					<div class="card-body" id="sizes-body"></div>
+				</div>
+			</div>
+			<div class="card" id="geo-card">
+				<div class="card-head">
+					<h2 data-i18n="card.countries">Países</h2>
+				</div>
+				<div class="card-body" id="geo-body"></div>
+			</div>
+			<div class="card" id="campaigns-card" hidden>
+				<div class="card-head">
+					<h2 data-i18n="card.campaigns">Campañas</h2>
+				</div>
+				<div class="card-body" id="campaigns-body"></div>
+			</div>
+		</main>
+
+		<footer class="foot" data-i18n="foot">Goatdash · dashboard de GoatCounter · código abierto</footer>
+	</div>
+</div>
+
+<script src="assets/world-map.js"></script>
+<script src="fixtures.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
