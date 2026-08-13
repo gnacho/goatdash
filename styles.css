@@ -327,15 +327,16 @@ body { min-height: 100vh; }
 	padding: 3px;
 }
 .theme-icon {
-	width: 28px; height: 28px;
+	height: 28px;
 	border: 0;
 	background: transparent;
 	color: var(--text-muted);
 	border-radius: 6px;
 	cursor: pointer;
-	display: grid;
-	place-items: center;
-	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 0 8px;
 }
 .theme-icon:hover { color: var(--text); }
 .theme-icon.active {
@@ -343,7 +344,11 @@ body { min-height: 100vh; }
 	color: var(--text);
 	box-shadow: var(--shadow);
 }
-.theme-icon svg { display: block; }
+.theme-icon svg { display: block; flex: none; }
+.theme-label {
+	font-size: 0.8rem;
+	white-space: nowrap;
+}
 
 /* ---------- User chip ---------- */
 .user-chip {
@@ -878,6 +883,8 @@ body { min-height: 100vh; }
 	.topbar { padding: 10px 14px; }
 	.seg-btn { padding: 5px 9px; }
 	.settings-label { display: none; }
+	.theme-label { display: none; }
+	.theme-icon { padding: 0 6px; }
 	.user-chip { max-width: 130px; }
 }
 
