@@ -44,6 +44,18 @@
 			"card.devices": "Dispositivos",
 			"card.countries": "Países",
 			"card.campaigns": "Campañas",
+			"card.referrers": "Referencias",
+			"channel.direct": "Directo",
+			"channel.search": "Buscadores",
+			"channel.campaign": "Campañas",
+			"channel.other": "Otros sitios",
+			"event.badge": "evento",
+			"kpi.events": "Eventos",
+			"ref.empty": "Sin referencias en este rango.",
+			"ref.emptyHint": "Amplía el rango para ver de dónde vienen tus visitas.",
+			"ref.widen": "Ampliar rango",
+			"top.refPages": "Páginas desde {name}",
+			"ref.noData": "Sin páginas desde este referrer.",
 			"kpi.visitors": "Visitantes únicos",
 			"kpi.pageviews": "Páginas vistas",
 			"kpi.toppage": "Página principal",
@@ -126,6 +138,18 @@
 			"card.devices": "Devices",
 			"card.countries": "Countries",
 			"card.campaigns": "Campaigns",
+			"card.referrers": "Referrers",
+			"channel.direct": "Direct",
+			"channel.search": "Search",
+			"channel.campaign": "Campaigns",
+			"channel.other": "Other sites",
+			"event.badge": "event",
+			"kpi.events": "Events",
+			"ref.empty": "No referrers in this range.",
+			"ref.emptyHint": "Widen the range to see where visitors come from.",
+			"ref.widen": "Widen range",
+			"top.refPages": "Pages from {name}",
+			"ref.noData": "No pages from this referrer.",
 			"kpi.visitors": "Total visitors",
 			"kpi.pageviews": "Pageviews",
 			"kpi.toppage": "Top page",
@@ -375,6 +399,7 @@
 		locations: "locations",
 		languages: "languages",
 		campaigns: "campaigns",
+		toprefs: "toprefs",
 	};
 
 	function endpointFor(key, start, end, extra = "") {
@@ -546,6 +571,7 @@
 			{ label: t("kpi.pageviews"), value: fmtNum(pageviewSum), sub: presetLabel(currentPreset) },
 			{ label: t("kpi.toppage"), value: top.name, string: true, sub: t("kpi.hits", { n: fmtNum(top.count) }) },
 			{ label: t("kpi.paths"), value: fmtNum((data.hits.hits || []).length), sub: t("kpi.distinct") },
+			{ label: t("kpi.events"), value: fmtNum(data.total.total_events ?? 0), sub: presetLabel(currentPreset) },
 		];
 		kpis.forEach((k) => {
 			const el = document.createElement("div");
@@ -671,7 +697,7 @@
 		body.appendChild(svg);
 	}
 
-	function renderTopList(container, items, { rank = true, formatName = (i) => i.name, nameSub = () => null, count = (i) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "" } = {}) {
+	function renderTopList(container, items, { rank = true, formatName = (i) => i.name, nameSub = () => null, count = (i) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "", badge = () => null } = {}) {
 		container.innerHTML = "";
 		if (!items || !items.length) { container.appendChild(emptyEl(t("no.data"))); return; }
 		const totalMax = total || Math.max(...items.map((i) => i.count), 1);
@@ -700,7 +726,10 @@
 			const share = total ? (count(item) / total) * 100 : null;
 			if (share !== null) pct.textContent = share.toFixed(1) + "%";
 			if (chev.textContent) row.appendChild(chev);
-			row.append(name, barWrap, cnt, pct);
+			row.append(name);
+			const badgeTxt = badge(item);
+			if (badgeTxt) { const bd = document.createElement("span"); bd.className = "list-badge"; bd.textContent = badgeTxt; row.appendChild(bd); }
+			row.append(barWrap, cnt, pct);
 			if (onRowClick) {
 				row.addEventListener("click", () => onRowClick(item, row));
 				row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(item, row); } });
@@ -715,7 +744,7 @@
 			btn.addEventListener("click", () => {
 				const c = container;
 				c.innerHTML = "";
-				c.appendChild(renderAllRows(items, { rank, formatName, nameSub, count, total: totalMax, page, onRowClick, prefix }));
+				c.appendChild(renderAllRows(items, { rank, formatName, nameSub, count, total: totalMax, page, onRowClick, prefix, badge }));
 			});
 			container.appendChild(btn);
 		}
@@ -745,7 +774,10 @@
 			const pct = document.createElement("span"); pct.className = "list-pct";
 			pct.textContent = ((opts.count(item) / opts.total) * 100).toFixed(1) + "%";
 			if (chev.textContent) row.appendChild(chev);
-			row.append(name, barWrap, cnt, pct);
+			row.append(name);
+			const badgeTxt = opts.badge ? opts.badge(item) : null;
+			if (badgeTxt) { const bd = document.createElement("span"); bd.className = "list-badge"; bd.textContent = badgeTxt; row.appendChild(bd); }
+			row.append(barWrap, cnt, pct);
 			if (opts.onRowClick) {
 				row.addEventListener("click", () => opts.onRowClick(item, row));
 				row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onRowClick(item, row); } });
@@ -918,6 +950,68 @@
 		container.appendChild(geo);
 	}
 
+	function refEmptyEl() {
+		const d = document.createElement("div");
+		d.className = "empty";
+		const p = document.createElement("p");
+		p.className = "empty-text";
+		p.textContent = t("ref.empty");
+		const hint = document.createElement("p");
+		hint.className = "empty-hint";
+		hint.textContent = t("ref.emptyHint");
+		const btn = document.createElement("button");
+		btn.className = "btn-secondary";
+		btn.style.cssText = "width:auto;padding:7px 14px;margin-top:6px";
+		btn.textContent = t("ref.widen");
+		btn.addEventListener("click", () => {
+			const b = document.querySelector('#range-seg [data-preset="90d"]');
+			if (b) b.click();
+		});
+		d.append(p, hint, btn);
+		return d;
+	}
+
+	function renderReferrers(stats, demoDetails) {
+		const body = $("#referrers-body");
+		body.innerHTML = "";
+		if (!stats || !stats.length) { body.appendChild(refEmptyEl()); return; }
+		const total = stats.reduce((a, s) => a + s.count, 0);
+		const channels = [
+			{ key: "direct", scheme: "o" },
+			{ key: "search", scheme: "g" },
+			{ key: "campaign", scheme: "c" },
+			{ key: "other", scheme: "h" },
+		];
+		const wrap = document.createElement("div");
+		wrap.className = "ref-groups";
+		channels.forEach((ch) => {
+			const items = stats.filter((s) => (s.ref_scheme || "o") === ch.scheme);
+			if (!items.length) return;
+			const head = document.createElement("div");
+			head.className = "ref-channel-head";
+			const lbl = document.createElement("span");
+			lbl.textContent = t("channel." + ch.key);
+			const cnt = document.createElement("span");
+			cnt.className = "ref-channel-count";
+			cnt.textContent = fmtNum(items.reduce((a, i) => a + i.count, 0));
+			head.append(lbl, cnt);
+			wrap.appendChild(head);
+			const sub = document.createElement("div");
+			sub.className = "ref-channel-body";
+			wrap.appendChild(sub);
+			renderTopList(sub, items, {
+				total,
+				rank: false,
+				formatName: (i) => i.name || t("top.direct"),
+				onRowClick: ch.scheme === "o" ? null : (item, row) => {
+					const demo = demoMode ? (demoDetails && demoDetails[item.name]) : null;
+					toggleDetail(row, "toprefs", item.id || item.name, item.name, { demo, kind: "stats" });
+				},
+			});
+		});
+		body.appendChild(wrap);
+	}
+
 	async function toggleDetail(row, page, itemId, label, { demo, kind }) {
 		const existing = row.querySelector(".detail-panel");
 		if (existing) { existing.remove(); row.classList.remove("open"); return; }
@@ -925,7 +1019,7 @@
 		const panel = document.createElement("div");
 		panel.className = "detail-panel";
 		const title = document.createElement("h4");
-		title.textContent = t(page === "hits" ? "top.referrers" : "detail.breakdown", { path: label, name: label });
+		title.textContent = t(page === "hits" ? "top.referrers" : page === "toprefs" ? "top.refPages" : "detail.breakdown", { path: label, name: label });
 		panel.appendChild(title);
 		row.appendChild(panel);
 
@@ -949,7 +1043,7 @@
 			}
 		}
 		if (!rows || !rows.length) {
-			panel.appendChild(emptyEl(t(page === "hits" ? "top.noRef" : "detail.noData")));
+			panel.appendChild(emptyEl(t(page === "hits" ? "top.noRef" : page === "toprefs" ? "ref.noData" : "detail.noData")));
 			return;
 		}
 		const max = Math.max(...rows.map((r) => r.count), 1);
@@ -1029,13 +1123,13 @@
 		$("#traffic-body").innerHTML = "";
 		$("#traffic-body").appendChild(skeletonCard(280));
 		$("#grid-kpis").innerHTML = "";
-		for (let i = 0; i < 4; i++) {
+		for (let i = 0; i < 5; i++) {
 			const s = document.createElement("div");
 			s.className = "kpi kpi-skel";
 			s.innerHTML = '<div class="skeleton sk-label"></div><div class="skeleton sk-value"></div>';
 			$("#grid-kpis").appendChild(s);
 		}
-		["pages-body", "languages-body", "browsers-body", "systems-body", "sizes-body", "geo-body", "campaigns-body"].forEach((id) => {
+		["pages-body", "languages-body", "referrers-body", "browsers-body", "systems-body", "sizes-body", "geo-body", "campaigns-body"].forEach((id) => {
 			$("#" + id).innerHTML = "";
 			$("#" + id).appendChild(skeletonCard(id === "geo-body" ? 280 : 200));
 		});
@@ -1056,6 +1150,7 @@
 			renderTrafficChart(data, group);
 			renderPagesDemo();
 			renderLanguages(data.languages.stats);
+			renderReferrers(data.toprefs ? data.toprefs.stats : [], GOATDASH_DEMO.refDetails);
 			renderDonutsDemo(data);
 			renderGeoDemo(data);
 			if (data.campaigns.stats.length) { $("#campaigns-card").hidden = false; renderCampaignsDemo(data.campaigns.stats); }
@@ -1065,14 +1160,15 @@
 
 		// real mode
 		try {
-			const [totalRes, hitsRes, prevRes, langRes] = await Promise.allSettled([
+			const [totalRes, hitsRes, prevRes, langRes, refRes] = await Promise.allSettled([
 				client.request(endpointFor("total", range.start, range.end)),
 				client.request(endpointFor("hits", range.start, range.end)),
 				client.request(endpointFor("total", getPreviousRange(range.start, range.end).start, getPreviousRange(range.start, range.end).end)),
 				client.request(endpointFor("languages", range.start, range.end)),
+				client.request(endpointFor("toprefs", range.start, range.end, "&limit=50")),
 			]);
 			if (current.cancelled) return;
-			progress.fired = 4; progress.done = 4;
+			progress.fired = 5; progress.done = 5;
 
 			data = {
 				total: totalRes.status === "fulfilled" ? totalRes.value : { total: 0 },
@@ -1087,6 +1183,7 @@
 			renderTrafficChart(data, group);
 			renderPages(data.hits.hits);
 			renderLanguages(data.languages.stats);
+			renderReferrers(refRes.status === "fulfilled" ? refRes.value.stats : [], null);
 			lastUpdatedAt = Date.now();
 
 			// lazy tiers
@@ -1211,11 +1308,12 @@
 	}
 
 	function renderPages(hits) {
-		const items = (hits || []).map((h) => ({ name: h.path, id: h.path_id || h.id, title: h.title, count: h.count }));
+		const items = (hits || []).map((h) => ({ name: h.path, id: h.path_id || h.id, title: h.title, count: h.count, event: h.event }));
 		if (!items.length) { $("#pages-body").innerHTML = ""; $("#pages-body").appendChild(emptyEl(t("no.pages"))); return; }
 		renderTopList($("#pages-body"), items, {
 			total: items.reduce((a, i) => a + i.count, 0),
 			nameSub: (i) => i.title || "",
+			badge: (i) => (i.event ? t("event.badge") : null),
 			page: "hits",
 			onRowClick: (item, row) => {
 				if (demoMode) {
