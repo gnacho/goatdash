@@ -93,6 +93,7 @@
 			"err.403": "La API key no tiene permiso de lectura. Ve a ajustes de tu GoatCounter, pestaña API, y crea una clave con acceso «Read only» o «Count & Read».",
 			"err.notfound": "No encontrado: {endpoint}. Comprueba que la URL apunta a tu sitio de GoatCounter (no a una sub-ruta).",
 			"err.rate": "Límite de peticiones alcanzado.",
+			"err.rateBanner": "El servidor está limitando las peticiones. Mostrando datos recientes; reintento en {sec} s.",
 			"err.req": "Petición fallida: {status}",
 			"no.data": "Sin datos.",
 			"no.pages": "Sin datos de páginas.",
@@ -198,6 +199,7 @@
 			"err.403": "API key lacks read permission. Go to your GoatCounter settings, API tab, and create a key with “Read only” or “Count & Read” access.",
 			"err.notfound": "Not found: {endpoint}. Check that the URL points to your GoatCounter site (not a sub-path).",
 			"err.rate": "Rate limit hit.",
+			"err.rateBanner": "The server is rate limiting requests. Showing recent data; retrying in {sec} s.",
 			"err.req": "Request failed: {status}",
 			"no.data": "No data.",
 			"no.pages": "No page data.",
@@ -223,7 +225,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.2.0";
+	const VERSION = "0.2.1";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -239,6 +241,11 @@
 	// OPTIONS (cabecera Authorization) que TAMBIÉN consume un token del rate-limit.
 	// Se dobla el espaciado para que preflight + GET sumen ~3.3 req/s y no haya 429.
 	const REQUEST_SPACING_CROSS_ORIGIN = REQUEST_SPACING_MS * 2;
+	// Nunca aplazar una petición más de 30 s por el rate-limit: si el servidor
+	// pide una espera mayor (p. ej. cubo horario agotado), es mejor fallar
+	// pronto, pintar caché antigua y avisar al usuario que congelarse en
+	// silencio durante minutos.
+	const RATE_WAIT_CAP_MS = 30_000;
 	const MAX_CONCURRENCY = 2;       // peticiones en vuelo simultáneas
 	const DEVICE_LABELS = { phone: "device.phone", tablet: "device.tablet", desktop: "device.desktop", desktophd: "device.desktophd", unknown: "device.unknown" };
 
@@ -435,12 +442,12 @@
 			return CACHE_PREFIX + this._baseFor(site) + ":" + endpoint;
 		}
 
-		_readCache(endpoint, site) {
+		_readCache(endpoint, site, allowStale = false) {
 			try {
 				const raw = localStorage.getItem(this._cacheKey(endpoint, site));
 				if (!raw) return null;
 				const { data, timestamp } = JSON.parse(raw);
-				if (Date.now() - timestamp > CACHE_TTL_MS) return null;
+				if (!allowStale && Date.now() - timestamp > CACHE_TTL_MS) return null;
 				return data;
 			} catch { return null; }
 		}
@@ -516,7 +523,10 @@
 			// para que peticiones concurrentes no lean el mismo instante.
 			const now = Date.now();
 			let start = Math.max(this._nextStart, now);
-			if (this._remaining === 0 && this._resetAt > start) start = this._resetAt;
+			if (this._remaining === 0 && this._resetAt > start) {
+				// Tope: no congelar la cola entera si el servidor pide esperar minutos.
+				start = Math.min(this._resetAt, now + RATE_WAIT_CAP_MS);
+			}
 			this._nextStart = start + spacing;
 			const wait = start - Date.now();
 			if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -549,8 +559,18 @@
 						lastErr = e;
 						const retriable = e instanceof TypeError || e.kind === "rate";
 						if (!retriable || attempt === retries) break;
-						await new Promise((r) => setTimeout(r, this._backoff(e, attempt)));
+						await new Promise((r) => setTimeout(r, Math.min(this._backoff(e, attempt), RATE_WAIT_CAP_MS)));
 					}
+				}
+				// Rate-limit persistente: si hay caché (aunque sea antigua) se pinta
+				// esa antes que fallar; el banner de rate informa al usuario.
+				if (lastErr && lastErr.kind === "rate") {
+					const stale = this._readCache(endpoint, site, true);
+					if (stale !== null) {
+						if (typeof this.onRateLimited === "function") this.onRateLimited(lastErr);
+						return stale;
+					}
+					if (typeof this.onRateLimited === "function") this.onRateLimited(lastErr);
 				}
 				throw lastErr;
 			} finally {
@@ -1536,6 +1556,27 @@
 
 	let refreshTick = 0;
 
+	// Rate-limit visible: en vez de congelarse en silencio, banner con cuenta
+	// atrás y reintento automático (techo de 90 s aunque el servidor pida más).
+	let rateTimer = null;
+	function showRateBanner(retryAfterSec) {
+		const banner = $("#error-banner");
+		if (!banner) return;
+		let remaining = Math.min(Math.max(Math.round(retryAfterSec || 30), 5), 90);
+		const paint = () => { banner.textContent = t("err.rateBanner", { sec: remaining }); banner.hidden = false; };
+		paint();
+		clearInterval(rateTimer);
+		rateTimer = setInterval(() => {
+			remaining -= 1;
+			if (remaining <= 0) {
+				clearInterval(rateTimer);
+				rateTimer = null;
+				banner.hidden = true;
+				if (!$("#dash-screen").hidden) loadData();
+			} else paint();
+		}, 1000);
+	}
+
 	async function loadData() {
 		cancelledRef.current = true;
 		cancelledRef = { current: false };
@@ -1865,6 +1906,7 @@
 				config = { baseURL, apiKey: keyRaw, me };
 				currentSite = config.site || null;
 				c.siteBaseURL = currentSite ? "https://" + currentSite : null;
+				c.onRateLimited = (e) => showRateBanner(e.retryAfter);
 				client = c;
 				localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 				demoMode = false;
@@ -1975,6 +2017,7 @@
 					currentSite = cfg.site || null;
 					client = new APIClient(cfg.baseURL, cfg.apiKey);
 					client.siteBaseURL = currentSite ? "https://" + currentSite : null;
+					client.onRateLimited = (e) => showRateBanner(e.retryAfter);
 					demoMode = false;
 					loadDashboard();
 					return;
