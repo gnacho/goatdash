@@ -225,7 +225,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.3.0";
+	const VERSION = "0.3.1";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -2062,4 +2062,10 @@
 	}
 
 	document.addEventListener("DOMContentLoaded", boot);
+
+	// Service worker: shell desde caché => recarga inmediata. El HTML es
+	// network-first (nunca versión vieja con red) y los assets ?v=N cache-first.
+	if ("serviceWorker" in navigator) {
+		navigator.serviceWorker.register("sw.js").catch(() => { /* sin SW: funciona igual, solo más lento */ });
+	}
 })();
