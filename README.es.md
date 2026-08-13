@@ -18,35 +18,47 @@
   </picture>
 </p>
 
-goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador como JavaScript plano: sin framework, sin CDN, sin paso de build, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Empezó como un rewrite de [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) y creció hasta ser un dashboard multi-sitio para varias landings servidas desde un solo dominio.
+goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador como JavaScript plano: sin framework, sin CDN, sin paso de build, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Empezó como un rewrite de [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) y creció hasta ser un dashboard multi-sitio que lee varios sitios de GoatCounter, cada uno servido en su propio dominio.
 
 ## ¿Por qué existe esto?
 
 Mantengo un puñado de proyectos open source autohospedados, cada uno con su landing (cloudless.club y cinco apps: deltos, easyzfs, keynest, netpulse, helios). Quería analítica a juego con ese montaje: en casa, ligera, sin cuenta en la nube y con el mismo estilo visual que las landings. GoatCounter era el backend evidente, un binario pequeño con SQLite y una API v0 que cubre todo. Lo que faltaba era el frontend.
 
-El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que quería, pero cargaba React, Recharts y Babel desde un CDN. Para una página que solo lee una API JSON me pareció un peso innecesario, así que lo reescribí en vanilla JS con mis propios tokens, le añadí ES/EN y un modo demo, y después vino la parte que originó todo esto: el multi-sitio. La API v0 de GoatCounter resuelve el sitio solo con el header Host, cosa que se rompe detrás de un reverse proxy donde todos los sitios llegan con el mismo Host. Parcheé GoatCounter para que acepte un header `X-Goatcounter-Site` y lo propuse aguas arriba en el [PR #915](https://github.com/arp242/goatcounter/pull/915). goatdash es lo que me quedó, y desde agosto de 2026 está midiendo todo el hub.
+El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que quería, pero cargaba React, Recharts y Babel desde un CDN. Para una página que solo lee una API JSON me pareció un peso innecesario, así que lo reescribí en vanilla JS con mis propios tokens, le añadí ES/EN y un modo demo, y después vino la parte que originó todo esto: el multi-sitio. GoatCounter resuelve el sitio con el header Host, que es su mecanismo core, así que cada uno de mis sitios vive en su propio dominio y el dashboard los consulta directamente, cross-origin. El binario oficial lo hace todo. También propuse aguas arriba un header `X-Goatcounter-Site` en el [PR #915](https://github.com/arp242/goatcounter/pull/915) como opción futura para setups single-origin, pero goatdash no lo necesita. Desde agosto de 2026 está midiendo todo el hub.
 
 ## ¿Por qué este stack?
 
-- **Vanilla JS, sin framework, sin CDN**: el original cargaba React, Recharts y Babel desde unpkg. Para una página que lee una API JSON y pinta un par de gráficas, ese es peso que no necesita. Cinco ficheros estáticos, nada que compilar, nada que se rompa cuando un CDN cambia de versión.
+- **Vanilla JS, sin framework, sin CDN**: el original cargaba React, Recharts y Babel desde unpkg. Para una página que lee una API JSON y pinta un par de gráficas, ese es peso que no necesita. Seis ficheros estáticos, nada que compilar, nada que se rompa cuando un CDN cambia de versión.
 - **Sin backend propio**: goatdash habla con la API de GoatCounter directamente desde el navegador. No hay servidor que parchear, ni base de datos que respaldar, ni servicio que mantener vivo. Desplegar es copiar ficheros.
 - **GoatCounter como backend**: un único binario ligero con SQLite, privacy-first por diseño y trivial de autohospedar. La API v0 ya expone todo lo que muestra el dashboard: totales, páginas, referrers, navegadores, sistemas, tamaños, ubicaciones, idiomas y campañas.
-- **Un patch pequeño para el multi-sitio**: la API v0 solo resuelve el sitio con el header Host, así que detrás de un reverse proxy todos los sitios parecen el mismo. El header `X-Goatcounter-Site` lo arregla y está propuesto aguas arriba. Hasta que se acepte, el multi-sitio necesita un GoatCounter compilado desde la rama parcheada.
+- **Sin patch de backend para el multi-sitio**: GoatCounter resuelve el sitio con el header Host, así que cada sitio vive en su propio dominio y el dashboard lo consulta allí. Un dominio por sitio, todos apuntando al mismo GoatCounter. El binario oficial lo hace todo.
 - **Lo que descarté**: un backend propio (otra cosa que mantener), un producto SaaS de analítica (los datos vivirían en el servidor de otro), o el stack React del original (excesivo para esto).
 
 ## Características
 
-- **Dashboard multi-sitio**: barra lateral con la cuenta y sus subsitios desde `/api/v0/sites`, conmutados con el header `X-Goatcounter-Site`. También funciona con un solo sitio, sin patch.
-- **Cinco tarjetas de KPI**: visitantes únicos (con tendencia vs el periodo anterior), páginas vistas, página principal, rutas rastreadas y total de eventos.
+- **Dashboard multi-sitio**: barra lateral con la cuenta y sus subsitios desde `/api/v0/sites`. Cada sitio se consulta en su propio dominio vía CORS, con el binario oficial de GoatCounter. También funciona con un solo sitio.
+- **Precache de sitios de la barra lateral**: tras cargar el sitio activo, goatdash calienta en segundo plano la caché del resto de sitios, así que cambiar de sitio es casi instantáneo. Solo pide los endpoints esenciales y se cancela si cambias.
+- **Cinco tarjetas de KPI**: visitantes únicos (con tendencia vs el periodo anterior), páginas vistas, página principal, rutas rastreadas y total de eventos, en una rejilla sin huecos.
 - **Referrers principales por canal**: referrers globales agrupados en directo, buscadores, campañas y otros sitios, con drill desde cada referrer a las páginas que trajo.
 - **Drill en cada tarjeta**: de páginas a sus referrers, de navegadores/sistemas/dispositivos a versiones, de países a regiones, de campañas a sus URLs de referrer.
 - **Mapa mundial coroplético**: países sombreados por visitas con escala de raíz cuadrada para que los mercados pequeños sigan visibles, tooltips y leyenda con degradado.
 - **Rangos flexibles**: hoy, 7d, 30d, 90d o un rango personalizado con fecha de inicio y fin.
-- **Tema e idioma**: oscuro, claro o auto (sigue `prefers-color-scheme`), y UI en ES/EN/Auto, todo persistido en localStorage.
+- **Tema tri-estado con anti-FOUC**: oscuro, claro o auto, conmutado con iconos de sol/luna/monitor en la topbar y aplicado antes de pintar por un `theme.js` externo que funciona con un CSP estricto `default-src 'self'`.
+- **Idioma**: UI en ES/EN/Auto, persistida en localStorage.
+- **Menú Ajustes con Acerca de**: el menú de engranaje abre Acerca de, que muestra la versión (0.2.0) y un enlace al código fuente.
+- **Usuario conectado en la topbar**: un chip con tu avatar y tu email desde `/api/v0/me`.
 - **Modo demo**: un clic carga el dashboard completo con datos de ejemplo realistas, sin necesidad de API key.
-- **Respeto a la API**: caché de respuesta de 60 segundos, cola de peticiones estrictamente secuencial con 500 ms entre llamadas, reintento por tarjeta e indicador de "actualizado hace Xs".
+- **Respeto a la API**: caché de respuesta de 60 segundos, un cliente concurrente pequeño que lee `X-Rate-Limit-Remaining` y `Retry-After` y se adapta para no superar nunca el límite del servidor, reintento por tarjeta e indicador de "actualizado hace Xs".
 
 ## Capturas
+
+**Multi-sitio: barra lateral con la cuenta y sus subsitios**
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-sidebar-es-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshot-sidebar-es-light.png">
+  <img alt="Dashboard de goatdash con la barra lateral abierta, listando la cuenta y sus subsitios" src="assets/screenshot-sidebar-es-light.png" width="800">
+</picture>
 
 **Referencias: principales referrers agrupados por canal con drill**
 
@@ -66,7 +78,7 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 
 ## ¿Qué debes esperar?
 
-Es un proyecto personal que uso a diario, no un producto. Sigue siendo MIT y contesto issues y PRs a mi ritmo, sin SLA. El patch del header para multi-sitio está propuesto aguas arriba y puede tardar en entrar; hasta entonces, el multi-sitio requiere un GoatCounter compilado desde la rama parcheada. Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada.
+Es un proyecto personal que uso a diario, no un producto. Sigue siendo MIT y contesto issues y PRs a mi ritmo, sin SLA. Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada.
 
 ## Instalación
 
@@ -78,7 +90,7 @@ python3 -m http.server 8000
 # abre http://localhost:8000
 ```
 
-La instancia en vivo de [stats.cloudless.club](https://stats.cloudless.club) funciona igual: nginx sirve los ficheros y proxya la API de GoatCounter por el mismo origen, así no hay CORS de por medio. Un server block mínimo:
+Para el multi-sitio, cada sitio vive en su propio dominio, todos apuntando al mismo GoatCounter, y GoatCounter resuelve el sitio con el header Host. El dashboard son ficheros estáticos servidos desde su propio dominio y consulta cada sitio cross-origin. Un server block mínimo para el dashboard:
 
 ```
 server {
@@ -88,14 +100,20 @@ server {
   root /var/www/goatdash;
   index index.html;
 
-  location /api/ {
-    proxy_pass http://127.0.0.1:8080;   # tu GoatCounter
-    proxy_set_header Host $host;
-  }
+  # El index cambia poco; los assets van versionados con ?v=N (ver abajo).
+  add_header Cache-Control "no-store";
 }
 ```
 
-Requisitos: cualquier servidor web estático y una instancia de GoatCounter con la API v0 accesible por HTTPS. Sin Docker, sin Node, sin herramientas de build.
+Requisitos: cualquier servidor web estático y una instancia de GoatCounter cuya API v0 sea accesible por HTTPS desde el navegador. Sin Docker, sin Node, sin herramientas de build.
+
+### Cache busting
+
+`index.html` carga sus assets con una query de versión, por ejemplo `app.js?v=3`. En cada deploy tienes que subir ese número, o el navegador sigue sirviendo el JavaScript anterior desde su caché de una hora y el dashboard se rompe. Si sirves el index con `Cache-Control: no-store`, el index siempre va fresco y solo los assets versionados se quedan en caché.
+
+### Content Security Policy
+
+goatdash no carga scripts inline, así que un `default-src 'self'` estricto cubre sus propios ficheros. La única adición es `connect-src`: tiene que incluir todos los dominios de sitio que consulta el dashboard, porque cada sitio es su propio origen.
 
 ## Configuración
 
@@ -106,11 +124,13 @@ goatdash no tiene fichero de configuración. En la primera carga, la pantalla de
 
 Ambas se guardan en el localStorage del navegador y solo viajan a tu instancia de GoatCounter por HTTPS. El tema, el idioma, el sitio seleccionado y el rango se persisten igual.
 
-### Multi-sitio y el header X-Goatcounter-Site
+### Multi-sitio entre dominios
 
-Para varios sitios en una misma cuenta de GoatCounter, el dashboard necesita que el backend distinga los sitios. La API v0 solo resuelve el sitio con el header Host, que detrás de un reverse proxy es siempre el mismo. goatdash envía un header `X-Goatcounter-Site` con el nombre del sitio en cada petición a la API; GoatCounter tiene que aceptarlo para que funcione el modo multi-sitio.
+Para varios sitios en una misma cuenta de GoatCounter, cada sitio necesita su propio dominio, y todos los dominios apuntan al mismo GoatCounter. GoatCounter resuelve el sitio con el header Host, que es su mecanismo core, así que el binario oficial es suficiente. El dashboard lee la lista de sitios de `/api/v0/sites` y consulta cada sitio en `https://<su-dominio>/api/...`.
 
-Ese header está implementado en un [fork de GoatCounter](https://github.com/gnacho/goatcounter) y propuesto aguas arriba en el [PR #915](https://github.com/arp242/goatcounter/pull/915). Hasta que se acepte, compila GoatCounter desde la rama `feat/site-select` para usar goatdash con varios sitios. Sin el patch, goatdash funciona igual de bien con un solo sitio, el que coincide con el header Host.
+GoatCounter envía `Access-Control-Allow-Origin: *`, así que las peticiones cross-origin funcionan sin proxy. Un detalle honesto: cada petición cross-origin que lleva el header `Authorization` dispara antes un preflight `OPTIONS`, así que cada llamada a la API son dos round trips.
+
+Propuse aguas arriba un header `X-Goatcounter-Site` en el [PR #915](https://github.com/arp242/goatcounter/pull/915). Permitiría que un solo origen sirviera todos los sitios, pero goatdash no lo necesita. Hasta que entre, un dominio por sitio es todo lo que hace falta.
 
 ## Uso
 
@@ -120,7 +140,7 @@ Pulsa casi cualquier cosa para hacer drill: una página muestra sus referrers, u
 
 ## Desarrollo
 
-goatdash es HTML, CSS y JavaScript planos. Sin package.json, sin bundler, sin harness de tests en el repo; los datos de demo viven en `fixtures.js` y reflejan la forma real de las respuestas de la API.
+goatdash es HTML, CSS y JavaScript planos, repartidos entre `index.html`, `styles.css`, `theme.js`, `app.js` y `fixtures.js`. Sin package.json, sin bundler, sin harness de tests en el repo; los datos de demo viven en `fixtures.js` y reflejan la forma real de las respuestas de la API.
 
 ```sh
 # Sirve el repo y abre http://localhost:8000
