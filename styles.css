@@ -219,7 +219,6 @@ body { min-height: 100vh; }
 	z-index: 20;
 }
 .topbar-left { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.site-name { font-weight: 600; font-size: 0.95rem; }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 
 .seg {
@@ -257,18 +256,6 @@ body { min-height: 100vh; }
 	font-size: 0.85rem;
 	padding: 5px 8px;
 }
-.site-select {
-	background: var(--bg-elev);
-	border: 1px solid var(--border);
-	border-radius: 8px;
-	color: var(--text);
-	font: inherit;
-	font-size: 0.85rem;
-	padding: 5px 8px;
-	max-width: 240px;
-	cursor: pointer;
-}
-.site-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .range-arrow { color: var(--text-muted); }
 
 .freshness {
@@ -355,7 +342,13 @@ body { min-height: 100vh; }
 }
 
 /* ---------- Dashboard grid ---------- */
+.shell {
+	display: flex;
+	align-items: flex-start;
+}
 .dashboard {
+	flex: 1;
+	min-width: 0;
 	max-width: 1200px;
 	margin: 0 auto;
 	padding: 20px;
@@ -381,6 +374,106 @@ body { min-height: 100vh; }
 	align-items: start;
 }
 .col-stack { display: flex; flex-direction: column; gap: var(--gap); }
+
+/* ---------- Sidebar (sitios) ---------- */
+.hamburger { display: none; }
+
+.sidebar {
+	flex: none;
+	width: 230px;
+	position: sticky;
+	top: var(--topbar-h, 59px);
+	height: calc(100vh - var(--topbar-h, 59px));
+	overflow-y: auto;
+	padding: 14px 10px 24px;
+	border-right: 1px solid var(--border);
+}
+
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-group { display: flex; flex-direction: column; gap: 2px; }
+
+.sidebar-group-label {
+	padding: 4px 10px 6px;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.07em;
+	color: var(--text-muted);
+}
+
+.sidebar-divider {
+	height: 1px;
+	background: var(--border);
+	margin: 10px 6px;
+}
+
+.sidebar-item {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 8px 10px;
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+.sidebar-item:hover { background: var(--bg-elev); }
+
+.sidebar-item::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 14%;
+	bottom: 14%;
+	width: 3px;
+	border-radius: 0 2px 2px 0;
+	background: transparent;
+}
+.sidebar-item[aria-current="page"] { background: var(--bg-elev2); }
+.sidebar-item[aria-current="page"]::before { background: var(--accent); }
+.sidebar-item[aria-current="page"] .sidebar-name { font-weight: 700; }
+
+.sidebar-item-account { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.sidebar-item-account:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.sidebar-item-account[aria-current="page"] { background: var(--bg-elev2); }
+
+.sidebar-icon {
+	flex: none;
+	width: 26px;
+	height: 26px;
+	border-radius: 7px;
+	font-family: var(--font-mono);
+	font-weight: 700;
+	font-size: 13px;
+	display: grid;
+	place-items: center;
+	user-select: none;
+}
+
+.sidebar-text { display: flex; flex-direction: column; min-width: 0; }
+.sidebar-name {
+	font-size: 0.9rem;
+	font-weight: 500;
+	line-height: 1.25;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.sidebar-cname {
+	font-family: var(--font-mono);
+	font-size: 0.68rem;
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.sidebar-backdrop { display: none; }
 
 .card {
 	background: var(--bg-elev);
@@ -655,6 +748,28 @@ body { min-height: 100vh; }
 }
 @media (max-width: 900px) {
 	.geo-grid { grid-template-columns: 1fr; }
+	.hamburger { display: grid; }
+	.sidebar {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 100vh;
+		width: 270px;
+		max-width: 85vw;
+		transform: translateX(-100%);
+		transition: transform 0.25s var(--ease);
+		z-index: 50;
+		background: var(--bg-elev);
+		box-shadow: 0 0 32px rgba(0, 0, 0, 0.35);
+	}
+	.sidebar.open { transform: translateX(0); }
+	.sidebar-backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.45);
+		z-index: 40;
+	}
 }
 @media (max-width: 640px) {
 	.grid-kpis { grid-template-columns: 1fr; }
