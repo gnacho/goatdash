@@ -230,7 +230,12 @@
 	const LANG_KEY = "gc-dashboard-lang-v1";
 	const CACHE_PREFIX = "gc-cache:";
 	const CACHE_TTL_MS = 60_000;
-	const RATE_LIMIT_MS = 500;
+	// Límite real del backend: 4 req/s por IP (cabecera X-Rate-Limit-Limit: 4).
+	// Antes el cliente serializaba TODO a 2 req/s (500 ms); ahora un semáforo de
+	// concurrencia pequeña + espaciado de arranque ~3.3 req/s, dejando margen bajo
+	// el límite, y se adapta a las cabeceras X-Rate-Limit-Remaining / Retry-After.
+	const REQUEST_SPACING_MS = 300;  // intervalo mínimo entre arranques (~3.3 req/s)
+	const MAX_CONCURRENCY = 2;       // peticiones en vuelo simultáneas
 	const DEVICE_LABELS = { phone: "device.phone", tablet: "device.tablet", desktop: "device.desktop", desktophd: "device.desktophd", unknown: "device.unknown" };
 
 	let lang = localStorage.getItem(LANG_KEY) || "auto";   // modo: es | en | auto (auto = default actual)
@@ -388,8 +393,12 @@
 			this.baseURL = baseURL.replace(/\/+$/, "");
 			this.apiKey = apiKey;
 			this.site = null; // optional X-Goatcounter-Site (sub)site selector
-			this.queue = Promise.resolve();
-			this.lastCompleted = 0;
+			this._inflight = 0;      // peticiones en vuelo (semáforo de concurrencia)
+			this._waitersHigh = [];  // cola de espera prioritaria (interacción)
+			this._waitersLow = [];   // cola de espera en segundo plano (precache)
+			this._nextStart = 0;     // instante mínimo para arrancar la siguiente petición
+			this._remaining = null;  // última X-Rate-Limit-Remaining vista
+			this._resetAt = 0;       // cuándo se rellena el límite (ms epoch)
 		}
 
 		static clearCache(baseURL) {
@@ -402,13 +411,14 @@
 			keys.forEach((k) => localStorage.removeItem(k));
 		}
 
-		_cacheKey(endpoint) {
-			return CACHE_PREFIX + this.baseURL + ":" + (this.site || "") + ":" + endpoint;
+		_cacheKey(endpoint, site) {
+			const s = site === undefined ? this.site : site;
+			return CACHE_PREFIX + this.baseURL + ":" + (s || "") + ":" + endpoint;
 		}
 
-		_readCache(endpoint) {
+		_readCache(endpoint, site) {
 			try {
-				const raw = localStorage.getItem(this._cacheKey(endpoint));
+				const raw = localStorage.getItem(this._cacheKey(endpoint, site));
 				if (!raw) return null;
 				const { data, timestamp } = JSON.parse(raw);
 				if (Date.now() - timestamp > CACHE_TTL_MS) return null;
@@ -416,16 +426,17 @@
 			} catch { return null; }
 		}
 
-		_writeCache(endpoint, data) {
+		_writeCache(endpoint, data, site) {
 			try {
-				localStorage.setItem(this._cacheKey(endpoint), JSON.stringify({ data, timestamp: Date.now() }));
+				localStorage.setItem(this._cacheKey(endpoint, site), JSON.stringify({ data, timestamp: Date.now() }));
 			} catch { /* quota/private mode: non-fatal */ }
 		}
 
-		async _fetchOnce(endpoint) {
+		async _fetchOnce(endpoint, site) {
 			const headers = { Authorization: "Bearer " + this.apiKey };
-			if (this.site) headers["X-Goatcounter-Site"] = this.site;
+			if (site) headers["X-Goatcounter-Site"] = site;
 			const res = await fetch(this.baseURL + endpoint, { headers });
+			this._observeRate(res);
 			if (res.status === 401) {
 				const err = new Error(t("err.401")); err.kind = "auth"; throw err;
 			}
@@ -436,7 +447,10 @@
 				const err = new Error(t("err.notfound", { endpoint })); err.kind = "notfound"; throw err;
 			}
 			if (res.status === 429) {
-				const err = new Error(t("err.rate")); err.kind = "rate"; throw err;
+				const err = new Error(t("err.rate")); err.kind = "rate";
+				const ra = res.headers.get("retry-after");
+				if (ra !== null && ra !== "") { const n = parseFloat(ra); if (!Number.isNaN(n)) err.retryAfter = n; }
+				throw err;
 			}
 			if (!res.ok) {
 				let body;
@@ -447,35 +461,83 @@
 			return res.json();
 		}
 
-		async request(endpoint, { retries = 2, forceRefresh = false } = {}) {
+		_observeRate(res) {
+			const rem = res.headers.get("x-rate-limit-remaining");
+			if (rem !== null && rem !== "") {
+				const n = parseInt(rem, 10);
+				if (!Number.isNaN(n)) this._remaining = n;
+			}
+			const reset = res.headers.get("x-rate-limit-reset");
+			if (reset !== null && reset !== "") {
+				const n = parseInt(reset, 10);
+				if (!Number.isNaN(n) && n > 0) this._resetAt = Date.now() + n * 1000;
+			}
+			const ra = res.headers.get("retry-after");
+			if (ra !== null && ra !== "") {
+				const n = parseFloat(ra);
+				if (!Number.isNaN(n) && n > 0) this._resetAt = Date.now() + n * 1000;
+			}
+		}
+
+		async _acquire(priority) {
+			if (this._inflight >= MAX_CONCURRENCY) {
+				const waiters = priority === "low" ? this._waitersLow : this._waitersHigh;
+				await new Promise((resolve) => waiters.push(resolve));
+			}
+			this._inflight++;
+		}
+
+		_release() {
+			this._inflight--;
+			const next = this._waitersHigh.shift() || this._waitersLow.shift();
+			if (next) next();
+		}
+
+		async _space() {
+			// Reserva atómicamente el siguiente turno de arranque ANTES de dormir,
+			// para que peticiones concurrentes no lean el mismo instante.
+			const now = Date.now();
+			let start = Math.max(this._nextStart, now);
+			if (this._remaining === 0 && this._resetAt > start) start = this._resetAt;
+			this._nextStart = start + REQUEST_SPACING_MS;
+			const wait = start - Date.now();
+			if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+		}
+
+		_backoff(e, attempt) {
+			if (e && typeof e.retryAfter === "number" && e.retryAfter > 0) return e.retryAfter * 1000;
+			return 700 + attempt * 1000 + Math.random() * 200;
+		}
+
+		async request(endpoint, { retries = 2, forceRefresh = false, site, priority = "high", signal } = {}) {
+			const s = site === undefined ? this.site : site;
 			if (!forceRefresh) {
-				const cached = this._readCache(endpoint);
+				const cached = this._readCache(endpoint, s);
 				if (cached !== null) return cached;
 			}
-			const run = async () => {
-				const wait = RATE_LIMIT_MS - (Date.now() - this.lastCompleted);
-				if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+			if (signal && signal.cancelled) return null;
+			await this._acquire(priority);
+			try {
+				if (signal && signal.cancelled) return null;
+				await this._space();
+				if (signal && signal.cancelled) return null;
 				let lastErr;
 				for (let attempt = 0; attempt <= retries; attempt++) {
 					try {
-						const data = await this._fetchOnce(endpoint);
-						this._writeCache(endpoint, data);
+						const data = await this._fetchOnce(endpoint, s);
+						this._writeCache(endpoint, data, s);
 						return data;
 					} catch (e) {
 						lastErr = e;
 						const retriable = e instanceof TypeError || e.kind === "rate";
 						if (!retriable || attempt === retries) break;
-						const backoff = 700 + attempt * 1000 + Math.random() * 200;
-						await new Promise((r) => setTimeout(r, backoff));
+						await new Promise((r) => setTimeout(r, this._backoff(e, attempt)));
 					}
 				}
 				throw lastErr;
-			};
-			const next = this.queue.then(run, run);
-			this.queue = next.catch(() => {});
-			const data = await next;
-			this.lastCompleted = Date.now();
-			return data;
+			} finally {
+				this._release();
+			}
 		}
 	}
 
@@ -535,6 +597,24 @@
 		let path = `/api/v0/stats/${ENDPOINTS[key]}`;
 		if (key === "hits") path += "?limit=20";
 		return path + (path.includes("?") ? "&" : "?") + q.replace(/^\?/, "") + extra;
+	}
+
+	// Conjunto completo de endpoints de una carga de sitio (idéntico al de loadData),
+	// para que el precache rellene exactamente las mismas claves de caché.
+	function buildEndpointSet(range) {
+		const prev = getPreviousRange(range.start, range.end);
+		return {
+			total: endpointFor("total", range.start, range.end),
+			hits: endpointFor("hits", range.start, range.end),
+			prev: endpointFor("total", prev.start, prev.end),
+			languages: endpointFor("languages", range.start, range.end),
+			toprefs: endpointFor("toprefs", range.start, range.end, "&limit=50"),
+			browsers: endpointFor("browsers", range.start, range.end),
+			systems: endpointFor("systems", range.start, range.end),
+			sizes: endpointFor("sizes", range.start, range.end),
+			locations: endpointFor("locations", range.start, range.end),
+			campaigns: endpointFor("campaigns", range.start, range.end),
+		};
 	}
 
 	// --------------------------------------------------------------- helpers
@@ -1320,6 +1400,38 @@
 		renderSidebar();
 	}
 
+	// --------------------------------------------------------------- precache
+	// Tras cargar el sitio activo, rellena en segundo plano la caché del resto de
+	// sitios del sidebar (mismo conjunto de endpoints, sin renderizar) para que el
+	// cambio de sitio sea instantáneo. Baja prioridad y cancelable: si el usuario
+	// cambia de sitio, se para y el sitio clicado pasa a la cola prioritaria.
+	let precacheToken = null;
+
+	async function precacheSites() {
+		if (precacheToken) precacheToken.cancelled = true;
+		if (demoMode || !client || !sitesList.length) return;
+		const token = { cancelled: false };
+		precacheToken = token;
+		const range = getDateRange(currentPreset, customStart, customEnd);
+		const urls = Object.values(buildEndpointSet(range));
+		const root = sitesList.find((s) => !s.parent);
+		const active = currentSite || (root ? root.cname : "");
+		const targets = sitesList
+			.filter((s) => s.cname && s.cname !== active)
+			.map((s) => s.cname);
+		for (const cname of targets) {
+			if (token.cancelled) break;
+			await Promise.allSettled(urls.map((u) =>
+				client.request(u, { site: cname, priority: "low", signal: token }).catch((e) => {
+					// Precache defensivo: un fallo no debe molestar al usuario.
+					console.warn("[precache]", cname, u, e && e.message ? e.message : e);
+					return null;
+				})
+			));
+		}
+		if (precacheToken === token) precacheToken = null;
+	}
+
 	function onSiteChange(cname) {
 		currentSite = cname || null;
 		if (client) client.site = currentSite;
@@ -1327,7 +1439,8 @@
 			config.site = currentSite;
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 		}
-		if (config && !demoMode) APIClient.clearCache(config.baseURL);
+		// Cancela el precache en curso: el sitio clicado tiene prioridad.
+		if (precacheToken) precacheToken.cancelled = true;
 		closeSidebar();
 		renderSidebar();
 		loadData();
@@ -1448,12 +1561,13 @@
 
 		// real mode
 		try {
+			const eps = buildEndpointSet(range);
 			const [totalRes, hitsRes, prevRes, langRes, refRes] = await Promise.allSettled([
-				client.request(endpointFor("total", range.start, range.end)),
-				client.request(endpointFor("hits", range.start, range.end)),
-				client.request(endpointFor("total", getPreviousRange(range.start, range.end).start, getPreviousRange(range.start, range.end).end)),
-				client.request(endpointFor("languages", range.start, range.end)),
-				client.request(endpointFor("toprefs", range.start, range.end, "&limit=50")),
+				client.request(eps.total),
+				client.request(eps.hits),
+				client.request(eps.prev),
+				client.request(eps.languages),
+				client.request(eps.toprefs),
 			]);
 			if (current.cancelled) return;
 			progress.fired = 5; progress.done = 5;
@@ -1474,6 +1588,10 @@
 			renderReferrers(refRes.status === "fulfilled" ? refRes.value.stats : [], null);
 			lastUpdatedAt = Date.now();
 
+			// Tras pintar el sitio activo, calienta en segundo plano la caché del
+			// resto de sitios del sidebar (baja prioridad, cancelable al cambiar).
+			precacheSites();
+
 			// lazy tiers
 			const lazy = async (key, refId, renderFn) => {
 				const target = $(refId);
@@ -1493,9 +1611,9 @@
 			await lazy("browsers", "#donut-row", async () => {
 				if (current.cancelled) return;
 				const [b, s, z] = await Promise.allSettled([
-					client.request(endpointFor("browsers", range.start, range.end)),
-					client.request(endpointFor("systems", range.start, range.end)),
-					client.request(endpointFor("sizes", range.start, range.end)),
+					client.request(eps.browsers),
+					client.request(eps.systems),
+					client.request(eps.sizes),
 				]);
 				if (current.cancelled) return;
 				if (b.status === "fulfilled") renderDonut($("#browsers-body"), b.value.stats, { total: b.value.total, page: "browsers", onDrill: (item, idx) => drillDetail("browsers", item, idx) });
@@ -1508,7 +1626,7 @@
 
 			await lazy("locations", "#geo-card", async () => {
 				if (current.cancelled) return;
-				const loc = await client.request(endpointFor("locations", range.start, range.end));
+				const loc = await client.request(eps.locations);
 				if (current.cancelled) return;
 				renderGeo($("#geo-body"), loc.stats, loc.total, client);
 			});
@@ -1516,7 +1634,7 @@
 			await lazy("campaigns", "#campaigns-card", async () => {
 				if (current.cancelled) return;
 				let camps;
-				try { camps = await client.request(endpointFor("campaigns", range.start, range.end)); }
+				try { camps = await client.request(eps.campaigns); }
 				catch (e) { if (e.kind === "notfound") { return; } throw e; }
 				if (current.cancelled) return;
 				if (camps.stats && camps.stats.length) {
