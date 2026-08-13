@@ -225,7 +225,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.2.2";
+	const VERSION = "0.3.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -437,13 +437,15 @@
 			return base;
 		}
 
-		_cacheKey(endpoint, site) {
-			return CACHE_PREFIX + this._baseFor(site) + ":" + endpoint;
+		// `cacheKey` explícita: las URLs llevan timestamps al minuto y cambian
+		// en cada recarga; con clave por preset la caché sobrevive recargas.
+		_cacheKey(endpoint, site, cacheKey) {
+			return CACHE_PREFIX + this._baseFor(site) + ":" + (cacheKey || endpoint);
 		}
 
-		_readCache(endpoint, site, allowStale = false) {
+		_readCache(endpoint, site, allowStale = false, cacheKey) {
 			try {
-				const raw = localStorage.getItem(this._cacheKey(endpoint, site));
+				const raw = localStorage.getItem(this._cacheKey(endpoint, site, cacheKey));
 				if (!raw) return null;
 				const { data, timestamp } = JSON.parse(raw);
 				if (!allowStale && Date.now() - timestamp > CACHE_TTL_MS) return null;
@@ -451,9 +453,9 @@
 			} catch { return null; }
 		}
 
-		_writeCache(endpoint, data, site) {
+		_writeCache(endpoint, data, site, cacheKey) {
 			try {
-				localStorage.setItem(this._cacheKey(endpoint, site), JSON.stringify({ data, timestamp: Date.now() }));
+				localStorage.setItem(this._cacheKey(endpoint, site, cacheKey), JSON.stringify({ data, timestamp: Date.now() }));
 			} catch { /* quota/private mode: non-fatal */ }
 		}
 
@@ -536,9 +538,9 @@
 			return 700 + attempt * 1000 + Math.random() * 200;
 		}
 
-		async request(endpoint, { retries = 2, forceRefresh = false, site, priority = "high", signal } = {}) {
+		async request(endpoint, { retries = 2, forceRefresh = false, site, priority = "high", signal, cacheKey } = {}) {
 			if (!forceRefresh) {
-				const cached = this._readCache(endpoint, site);
+				const cached = this._readCache(endpoint, site, false, cacheKey);
 				if (cached !== null) return cached;
 			}
 			if (signal && signal.cancelled) return null;
@@ -552,7 +554,7 @@
 				for (let attempt = 0; attempt <= retries; attempt++) {
 					try {
 						const data = await this._fetchOnce(endpoint, site);
-						this._writeCache(endpoint, data, site);
+						this._writeCache(endpoint, data, site, cacheKey);
 						return data;
 					} catch (e) {
 						lastErr = e;
@@ -564,7 +566,7 @@
 				// Rate-limit persistente: si hay caché (aunque sea antigua) se pinta
 				// esa antes que fallar; el banner de rate informa al usuario.
 				if (lastErr && lastErr.kind === "rate") {
-					const stale = this._readCache(endpoint, site, true);
+					const stale = this._readCache(endpoint, site, true, cacheKey);
 					if (stale !== null) {
 						if (typeof this.onRateLimited === "function") this.onRateLimited(lastErr);
 						return stale;
@@ -652,6 +654,18 @@
 			locations: endpointFor("locations", range.start, range.end),
 			campaigns: endpointFor("campaigns", range.start, range.end),
 		};
+	}
+
+	// Claves de caché ESTABLES por preset. Las URLs reales llevan timestamps al
+	// minuto (ventana móvil) y cambian en cada recarga, así que indexar por URL
+	// invalidaba la caché local siempre. Con clave por preset, una recarga pinta
+	// al instante los datos de la visita anterior (stale-while-revalidate) y la
+	// red los refresca por detrás.
+	function cacheNS() {
+		return currentPreset === "custom" ? `c:${customStart || ""}:${customEnd || ""}` : `p:${currentPreset}`;
+	}
+	function cacheKeyFor(kind, site) {
+		return (site ? `s:${site}:` : "a:") + cacheNS() + ":" + kind;
 	}
 
 	// --------------------------------------------------------------- helpers
@@ -1454,7 +1468,7 @@
 		// Solo lo esencial (KPIs + gráfico). Las mismas URLs que usa loadData,
 		// así el precache rellena exactamente las mismas claves de caché.
 		const eps = buildEndpointSet(range);
-		const urls = [eps.total, eps.hits];
+		const urls = [{ url: eps.total, kind: "total" }, { url: eps.hits, kind: "hits" }];
 		const root = sitesList.find((s) => !s.parent);
 		const active = currentSite || (root ? root.cname : "");
 		const targets = sitesList
@@ -1462,10 +1476,10 @@
 			.map((s) => s.cname);
 		for (const cname of targets) {
 			if (token.cancelled) break;
-			await Promise.allSettled(urls.map((u) =>
-				client.request(u, { site: cname, priority: "low", signal: token }).catch((e) => {
+			await Promise.allSettled(urls.map(({ url, kind }) =>
+				client.request(url, { site: cname, priority: "low", signal: token, cacheKey: cacheKeyFor(kind, cname) }).catch((e) => {
 					// Precache defensivo: un fallo no debe molestar al usuario.
-					console.warn("[precache]", cname, u, e && e.message ? e.message : e);
+					console.warn("[precache]", cname, kind, e && e.message ? e.message : e);
 					return null;
 				})
 			));
@@ -1624,11 +1638,27 @@
 		// real mode
 		try {
 			const eps = buildEndpointSet(range);
+			const ck = (kind) => cacheKeyFor(kind, currentSite);
+
+			// Fase 0 (stale-while-revalidate): si una visita anterior dejó datos
+			// de este sitio+rango en caché, se pintan AL INSTANTE (aunque viejos)
+			// y la red los refresca en las fases siguientes. Recarga = 0 ms.
+			const staleTotal = client._readCache(eps.total, undefined, true, ck("total"));
+			const staleHits = client._readCache(eps.hits, undefined, true, ck("hits"));
+			if (staleTotal !== null) {
+				const stalePrev = client._readCache(eps.prev, undefined, true, ck("prev"));
+				renderKPIs({ total: staleTotal, hits: staleHits || { hits: [] } },
+					stalePrev ? (stalePrev.total ?? stalePrev.total_utc ?? null) : null, group);
+				if (staleHits) renderTrafficChart({ total: staleTotal, hits: staleHits }, group);
+				if (staleHits) renderPages(staleHits.hits || []);
+				lastUpdatedAt = Date.now();
+			}
+
 			// Fase crítica: KPIs + gráfico + páginas, solo con total + hits. Para un
 			// sitio precacheado ambas están en caché y el cambio de sitio es inmediato.
 			const [totalRes, hitsRes] = await Promise.allSettled([
-				client.request(eps.total),
-				client.request(eps.hits),
+				client.request(eps.total, { cacheKey: ck("total") }),
+				client.request(eps.hits, { cacheKey: ck("hits") }),
 			]);
 			if (current.cancelled) return;
 			if (totalRes.status === "rejected" && totalRes.reason.kind === "auth") return handleAuthError(totalRes.reason.message);
@@ -1646,9 +1676,9 @@
 
 			// Fase secundaria: tendencia (periodo anterior), idiomas y referencias.
 			const [prevRes, langRes, refRes] = await Promise.allSettled([
-				client.request(eps.prev),
-				client.request(eps.languages),
-				client.request(eps.toprefs),
+				client.request(eps.prev, { cacheKey: ck("prev") }),
+				client.request(eps.languages, { cacheKey: ck("languages") }),
+				client.request(eps.toprefs, { cacheKey: ck("toprefs") }),
 			]);
 			if (current.cancelled) return;
 			progress.done = 5;
@@ -1685,9 +1715,9 @@
 				lazy("browsers", "#donut-row", async () => {
 					if (current.cancelled) return;
 					const [b, s, z] = await Promise.allSettled([
-						client.request(eps.browsers),
-						client.request(eps.systems),
-						client.request(eps.sizes),
+						client.request(eps.browsers, { cacheKey: ck("browsers") }),
+						client.request(eps.systems, { cacheKey: ck("systems") }),
+						client.request(eps.sizes, { cacheKey: ck("sizes") }),
 					]);
 					if (current.cancelled) return;
 					if (b.status === "fulfilled") renderDonut($("#browsers-body"), b.value.stats, { total: b.value.total, page: "browsers", onDrill: (item, idx) => drillDetail("browsers", item, idx) });
@@ -1700,7 +1730,7 @@
 
 				lazy("locations", "#geo-card", async () => {
 					if (current.cancelled) return;
-					const loc = await client.request(eps.locations);
+					const loc = await client.request(eps.locations, { cacheKey: ck("locations") });
 					if (current.cancelled) return;
 					renderGeo($("#geo-body"), loc.stats, loc.total, client);
 				}),
@@ -1708,7 +1738,7 @@
 				lazy("campaigns", "#campaigns-card", async () => {
 					if (current.cancelled) return;
 					let camps;
-					try { camps = await client.request(eps.campaigns); }
+					try { camps = await client.request(eps.campaigns, { cacheKey: ck("campaigns") }); }
 					catch (e) { if (e.kind === "notfound") { return; } throw e; }
 					if (current.cancelled) return;
 					if (camps.stats && camps.stats.length) {
