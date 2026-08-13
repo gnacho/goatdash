@@ -225,28 +225,27 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.2.1";
+	const VERSION = "0.2.2";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
 	const LANG_KEY = "gc-dashboard-lang-v1";
 	const CACHE_PREFIX = "gc-cache:";
 	const CACHE_TTL_MS = 60_000;
-	// Límite real del backend: 4 req/s por IP (cabecera X-Rate-Limit-Limit: 4).
-	// Antes el cliente serializaba TODO a 2 req/s (500 ms); ahora un semáforo de
-	// concurrencia pequeña + espaciado de arranque ~3.3 req/s, dejando margen bajo
-	// el límite, y se adapta a las cabeceras X-Rate-Limit-Remaining / Retry-After.
-	const REQUEST_SPACING_MS = 300;  // intervalo mínimo entre arranques (~3.3 req/s)
+	// Límite del backend (configurado en el servidor): 20 req/s + 5000/h.
+	// Semáforo de concurrencia + espaciado de arranque que deja margen (~7-10
+	// req/s incluyendo preflights), adaptándose a X-Rate-Limit-Remaining.
+	const REQUEST_SPACING_MS = 100;  // intervalo mínimo entre arranques (~10 req/s)
 	// Cross-origin (multi-sitio sin proxy): cada petición dispara un preflight
 	// OPTIONS (cabecera Authorization) que TAMBIÉN consume un token del rate-limit.
-	// Se dobla el espaciado para que preflight + GET sumen ~3.3 req/s y no haya 429.
+	// Se dobla el espaciado para contar preflight + GET.
 	const REQUEST_SPACING_CROSS_ORIGIN = REQUEST_SPACING_MS * 2;
 	// Nunca aplazar una petición más de 30 s por el rate-limit: si el servidor
 	// pide una espera mayor (p. ej. cubo horario agotado), es mejor fallar
 	// pronto, pintar caché antigua y avisar al usuario que congelarse en
 	// silencio durante minutos.
 	const RATE_WAIT_CAP_MS = 30_000;
-	const MAX_CONCURRENCY = 2;       // peticiones en vuelo simultáneas
+	const MAX_CONCURRENCY = 4;       // peticiones en vuelo simultáneas
 	const DEVICE_LABELS = { phone: "device.phone", tablet: "device.tablet", desktop: "device.desktop", desktophd: "device.desktophd", unknown: "device.unknown" };
 
 	let lang = localStorage.getItem(LANG_KEY) || "auto";   // modo: es | en | auto (auto = default actual)
@@ -1680,40 +1679,44 @@
 				});
 			};
 
-			await lazy("browsers", "#donut-row", async () => {
-				if (current.cancelled) return;
-				const [b, s, z] = await Promise.allSettled([
-					client.request(eps.browsers),
-					client.request(eps.systems),
-					client.request(eps.sizes),
-				]);
-				if (current.cancelled) return;
-				if (b.status === "fulfilled") renderDonut($("#browsers-body"), b.value.stats, { total: b.value.total, page: "browsers", onDrill: (item, idx) => drillDetail("browsers", item, idx) });
-				else renderDonutErr("browsers", b.reason);
-				if (s.status === "fulfilled") renderDonut($("#systems-body"), s.value.stats, { total: s.value.total, page: "systems", onDrill: (item, idx) => drillDetail("systems", item, idx) });
-				else renderDonutErr("systems", s.reason);
-				if (z.status === "fulfilled") renderDonut($("#sizes-body"), z.value.stats.map((i) => ({ ...i, name: deviceLabel(i.name) })), { total: z.value.total, page: "sizes", onDrill: (item, idx) => drillDetail("sizes", item, idx) });
-				else renderDonutErr("sizes", z.reason);
-			});
+			// Tiers lazy en PARALELO entre sí: en un escritorio grande todas las
+			// tarjetas son visibles y encadenarlas alarga el pintado completo.
+			await Promise.all([
+				lazy("browsers", "#donut-row", async () => {
+					if (current.cancelled) return;
+					const [b, s, z] = await Promise.allSettled([
+						client.request(eps.browsers),
+						client.request(eps.systems),
+						client.request(eps.sizes),
+					]);
+					if (current.cancelled) return;
+					if (b.status === "fulfilled") renderDonut($("#browsers-body"), b.value.stats, { total: b.value.total, page: "browsers", onDrill: (item, idx) => drillDetail("browsers", item, idx) });
+					else renderDonutErr("browsers", b.reason);
+					if (s.status === "fulfilled") renderDonut($("#systems-body"), s.value.stats, { total: s.value.total, page: "systems", onDrill: (item, idx) => drillDetail("systems", item, idx) });
+					else renderDonutErr("systems", s.reason);
+					if (z.status === "fulfilled") renderDonut($("#sizes-body"), z.value.stats.map((i) => ({ ...i, name: deviceLabel(i.name) })), { total: z.value.total, page: "sizes", onDrill: (item, idx) => drillDetail("sizes", item, idx) });
+					else renderDonutErr("sizes", z.reason);
+				}),
 
-			await lazy("locations", "#geo-card", async () => {
-				if (current.cancelled) return;
-				const loc = await client.request(eps.locations);
-				if (current.cancelled) return;
-				renderGeo($("#geo-body"), loc.stats, loc.total, client);
-			});
+				lazy("locations", "#geo-card", async () => {
+					if (current.cancelled) return;
+					const loc = await client.request(eps.locations);
+					if (current.cancelled) return;
+					renderGeo($("#geo-body"), loc.stats, loc.total, client);
+				}),
 
-			await lazy("campaigns", "#campaigns-card", async () => {
-				if (current.cancelled) return;
-				let camps;
-				try { camps = await client.request(eps.campaigns); }
-				catch (e) { if (e.kind === "notfound") { return; } throw e; }
-				if (current.cancelled) return;
-				if (camps.stats && camps.stats.length) {
-					$("#campaigns-card").hidden = false;
-					renderTopList($("#campaigns-body"), camps.stats, { total: camps.total, page: "campaigns", onRowClick: (item, row) => toggleDetail(row, "campaigns", item.id || item.name, item.name, { demo: null, kind: "stats" }) });
-				}
-			});
+				lazy("campaigns", "#campaigns-card", async () => {
+					if (current.cancelled) return;
+					let camps;
+					try { camps = await client.request(eps.campaigns); }
+					catch (e) { if (e.kind === "notfound") { return; } throw e; }
+					if (current.cancelled) return;
+					if (camps.stats && camps.stats.length) {
+						$("#campaigns-card").hidden = false;
+						renderTopList($("#campaigns-body"), camps.stats, { total: camps.total, page: "campaigns", onRowClick: (item, row) => toggleDetail(row, "campaigns", item.id || item.name, item.name, { demo: null, kind: "stats" }) });
+					}
+				}),
+			]);
 			updateFreshness();
 		} catch (e) {
 			if (e.kind === "auth") return handleAuthError(e.message);
