@@ -35,6 +35,13 @@
 			"theme.light": "Claro",
 			"theme.auto": "Auto",
 			"menu.disconnect": "Desconectar",
+			"menu.settings": "Ajustes",
+			"menu.about": "Acerca de",
+			"about.version": "Versión {v}",
+			"about.repo": "Ver código fuente",
+			"about.close": "Cerrar",
+			"user.demo": "Demo",
+			"topbar.theme": "Tema",
 			"demo.banner": "📊 Viendo datos de demo · Conecta tu GoatCounter para ver analítica real",
 			"demo.connect": "Conectar →",
 			"card.traffic": "Visitantes en el tiempo",
@@ -133,6 +140,13 @@
 			"theme.light": "Light",
 			"theme.auto": "Auto",
 			"menu.disconnect": "Disconnect",
+			"menu.settings": "Settings",
+			"menu.about": "About",
+			"about.version": "Version {v}",
+			"about.repo": "View source code",
+			"about.close": "Close",
+			"user.demo": "Demo",
+			"topbar.theme": "Theme",
 			"demo.banner": "📊 Viewing demo data · Connect your GoatCounter to see real analytics",
 			"demo.connect": "Connect →",
 			"card.traffic": "Visitors over time",
@@ -209,6 +223,8 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
+	const VERSION = "0.1.0";
+	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
 	const LANG_KEY = "gc-dashboard-lang-v1";
@@ -282,6 +298,11 @@
 			btn.classList.toggle("active", active);
 			btn.setAttribute("aria-checked", String(active));
 		});
+		document.querySelectorAll(".theme-switch [data-theme-option]").forEach((btn) => {
+			const active = btn.dataset.themeOption === theme;
+			btn.classList.toggle("active", active);
+			btn.setAttribute("aria-pressed", String(active));
+		});
 	}
 
 	function applyLang() {
@@ -314,9 +335,35 @@
 			btn.classList.toggle("active", active);
 			btn.setAttribute("aria-checked", String(active));
 		});
+		const settingsBtn = $("#menu-btn");
+		if (settingsBtn) settingsBtn.setAttribute("aria-label", t("menu.settings"));
+		const themeSwitch = $("#theme-switch");
+		if (themeSwitch) themeSwitch.setAttribute("aria-label", t("topbar.theme"));
+		document.querySelectorAll(".theme-switch [data-theme-option]").forEach((btn) => {
+			btn.setAttribute("aria-label", t("theme." + btn.dataset.themeOption));
+		});
+		const aboutClose = $("#about-close");
+		if (aboutClose) aboutClose.setAttribute("aria-label", t("about.close"));
 	}
 
 	const SUBMENU_TRIGGERS = ["#theme-btn", "#lang-btn", "#lang-toggle"];
+
+	function renderUser() {
+		const chip = $("#user-chip");
+		const avatar = $("#user-avatar");
+		const email = $("#user-email");
+		if (!chip) return;
+		if (demoMode || !config || !config.me || !config.me.user || !config.me.user.email) {
+			if (avatar) avatar.textContent = "D";
+			if (email) email.textContent = t("user.demo");
+			chip.title = t("user.demo");
+			return;
+		}
+		const em = config.me.user.email;
+		if (avatar) avatar.textContent = (em.charAt(0) || "?").toUpperCase();
+		if (email) email.textContent = em;
+		chip.title = em;
+	}
 
 	function closeSubmenus() {
 		document.querySelectorAll(".submenu").forEach((el) => { el.hidden = true; });
@@ -1338,6 +1385,7 @@
 		$("#demo-banner").hidden = !demoMode;
 		applyLang();
 		applyTheme();
+		renderUser();
 		syncTopbarHeight();
 		$("#range-seg").addEventListener("click", onRangeChange);
 		$("#custom-start").addEventListener("change", onCustomChange);
@@ -1688,7 +1736,12 @@
 			config = { baseURL: "_demo_", apiKey: "_demo_", me: { site: { cname: "Demo site", code: "demo" } } };
 			loadDashboard();
 		});
+	}
 
+	// ------------------------------------------------------------- controls
+	// Listeners de tema/idioma/menú: se registran UNA vez en boot(), para que
+	// funcionen tanto tras conectar como tras recargar con config guardada.
+	function initControls() {
 		$("#lang-toggle").addEventListener("click", (e) => {
 			e.stopPropagation();
 			toggleSubmenu("#lang-toggle-menu", "#lang-toggle");
@@ -1721,6 +1774,21 @@
 		$("#disconnect-btn").addEventListener("click", () => disconnect());
 		$("#demo-connect").addEventListener("click", () => disconnect());
 
+		$("#about-btn").addEventListener("click", () => {
+			$("#menu").hidden = true;
+			$("#menu-btn").setAttribute("aria-expanded", "false");
+			const dialog = $("#about-dialog");
+			const version = $("#about-version");
+			const repo = $("#about-repo");
+			if (version) version.textContent = t("about.version", { v: VERSION });
+			if (repo) { repo.textContent = t("about.repo"); repo.href = REPO_URL; }
+			if (dialog && !dialog.open) dialog.showModal();
+		});
+		$("#about-close").addEventListener("click", () => {
+			const dialog = $("#about-dialog");
+			if (dialog && dialog.open) dialog.close();
+		});
+
 		$("#menu-btn").addEventListener("click", (e) => {
 			e.stopPropagation();
 			const menu = $("#menu");
@@ -1747,6 +1815,7 @@
 			if (lang === "auto") applyLang();
 		});
 		initSidebar();
+		initControls();
 		window.addEventListener("resize", syncTopbarHeight);
 		try {
 			const saved = localStorage.getItem(STORAGE_KEY);
