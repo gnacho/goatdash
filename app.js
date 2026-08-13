@@ -89,6 +89,9 @@
 			"device.desktophd": "Pantalla HD",
 			"device.unknown": "Desconocido",
 			"lang.name": "Español",
+			"sidebar.account": "Cuenta",
+			"sidebar.sites": "Sitios",
+			"sidebar.open": "Abrir menú de sitios",
 		},
 		en: {
 			"app.title": "Goatdash",
@@ -171,6 +174,9 @@
 			"device.desktophd": "HD Display",
 			"device.unknown": "Unknown",
 			"lang.name": "English",
+			"sidebar.account": "Account",
+			"sidebar.sites": "Sites",
+			"sidebar.open": "Open sites menu",
 		},
 	};
 
@@ -202,6 +208,7 @@
 	let detailData = {};      // { key: [{name,count}] }
 	let highlightCode = null;
 	let trafficCache = {};    // preset -> { points, total }
+	let sidebarOpen = false;  // móvil: sheet desplegado
 	const t = (key, vars) => {
 		let s = (I18N[lang] || I18N.es)[key];
 		if (s === undefined) s = key;
@@ -229,6 +236,11 @@
 		});
 		$("#lang-btn") && ($("#lang-btn").textContent = t("menu.lang", { idioma: t("lang.name") }));
 		$("#theme-btn") && ($("#theme-btn").textContent = t("menu.theme", { tema: theme === "dark" ? t("theme.dark") : t("theme.light") }));
+		const st = $("#sidebar-toggle");
+		if (st) st.setAttribute("aria-label", t("sidebar.open"));
+		const sn = $("#sidebar-nav");
+		if (sn) sn.setAttribute("aria-label", t("sidebar.sites"));
+		renderSidebar();
 	}
 
 	// ------------------------------------------------------------- API client
@@ -965,35 +977,196 @@
 	}
 
 	// ------------------------------------------------------------ site selector
-	async function loadSiteSelector() {
-		const sel = $("#site-select");
-		if (demoMode || !client) { sel.hidden = true; return; }
-		try {
-			const data = await client.request("/api/v0/sites", { forceRefresh: true });
-			sitesList = (data && data.sites) || [];
-			const options = sitesList.map((s) => {
-				const label = s.cname || s.code || ("#" + s.id);
-				return `<option value="${label}">${label}</option>`;
-			}).join("");
-			sel.innerHTML = options || "";
-			if (sitesList.length <= 1) { sel.hidden = true; return; }
-			sel.value = currentSite || sitesList[0].cname || sitesList[0].code || "";
-			sel.hidden = false;
-		} catch {
-			sel.hidden = true;
+	// Helpers de nombre/color para el sidebar.
+	function siteSlug(cname) {
+		const parts = (cname || "").split(".");
+		if (parts.length >= 2 && parts[0] === "stats") return parts[1];
+		return parts[0] || "";
+	}
+	function legibleSiteName(cname) {
+		const slug = siteSlug(cname);
+		const overrides = { easyzfs: "EasyZFS", netpulse: "NetPulse" };
+		if (overrides[slug]) return overrides[slug];
+		if (!slug) return "Site";
+		return slug.charAt(0).toUpperCase() + slug.slice(1);
+	}
+	const SITE_COLORS = ["#3fb950", "#a371f7", "#e3b341", "#f778ba", "#56d4dd", "#ffa657", "#d29922", "#6e3fc2"];
+	function siteColorFor(slug) {
+		let h = 0;
+		for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) | 0;
+		return SITE_COLORS[Math.abs(h) % SITE_COLORS.length];
+	}
+
+	function sidebarItemEl(site, isAccount) {
+		const cname = site.cname || site.code || "";
+		const name = legibleSiteName(cname);
+		const btn = document.createElement("button");
+		btn.type = "button";
+		btn.className = "sidebar-item" + (isAccount ? " sidebar-item-account" : "");
+		btn.dataset.site = isAccount ? "" : cname;
+		const active = isAccount
+			? (currentSite === null || currentSite === cname || currentSite === (site.code || ""))
+			: (currentSite === cname);
+		if (active) btn.setAttribute("aria-current", "page");
+
+		const icon = document.createElement("span");
+		icon.className = "sidebar-icon";
+		icon.textContent = name.charAt(0).toUpperCase();
+		if (isAccount) {
+			icon.style.background = "var(--accent)";
+			icon.style.color = "var(--accent-fg)";
+		} else {
+			icon.style.background = siteColorFor(siteSlug(cname));
+			icon.style.color = "#fff";
+		}
+
+		const text = document.createElement("span");
+		text.className = "sidebar-text";
+		const nm = document.createElement("span");
+		nm.className = "sidebar-name";
+		nm.textContent = name;
+		const sub = document.createElement("small");
+		sub.className = "sidebar-cname";
+		sub.textContent = cname;
+		text.append(nm, sub);
+
+		btn.append(icon, text);
+		return btn;
+	}
+
+	function renderSidebar() {
+		const nav = $("#sidebar-nav");
+		const aside = $("#sidebar");
+		const toggle = $("#sidebar-toggle");
+		if (!nav || !aside || !toggle) return;
+
+		if (demoMode || !client) {
+			nav.innerHTML = "";
+			aside.hidden = true;
+			toggle.hidden = true;
+			return;
+		}
+
+		const root = sitesList.find((s) => !s.parent);
+		const children = sitesList.filter((s) => s !== root);
+
+		if ((root ? 1 : 0) + children.length <= 1) {
+			nav.innerHTML = "";
+			aside.hidden = true;
+			toggle.hidden = true;
+			return;
+		}
+
+		const prevFocusSite = (() => {
+			const el = nav.querySelector(".sidebar-item:focus");
+			return el ? el.dataset.site : null;
+		})();
+
+		const frag = document.createDocumentFragment();
+		if (root) {
+			const g = document.createElement("div");
+			g.className = "sidebar-group";
+			const label = document.createElement("div");
+			label.className = "sidebar-group-label";
+			label.textContent = t("sidebar.account");
+			g.append(label, sidebarItemEl(root, true));
+			frag.appendChild(g);
+			if (children.length) {
+				const div = document.createElement("div");
+				div.className = "sidebar-divider";
+				frag.appendChild(div);
+			}
+		}
+		if (children.length) {
+			const g = document.createElement("div");
+			g.className = "sidebar-group";
+			const label = document.createElement("div");
+			label.className = "sidebar-group-label";
+			label.textContent = t("sidebar.sites");
+			g.appendChild(label);
+			children.forEach((s) => g.appendChild(sidebarItemEl(s, false)));
+			frag.appendChild(g);
+		}
+
+		nav.innerHTML = "";
+		nav.appendChild(frag);
+		nav.setAttribute("aria-label", t("sidebar.sites"));
+		aside.hidden = false;
+		toggle.hidden = false;
+
+		if (prevFocusSite !== null && prevFocusSite !== undefined) {
+			const next = [...nav.querySelectorAll(".sidebar-item")].find((el) => el.dataset.site === prevFocusSite);
+			if (next) next.focus();
 		}
 	}
 
-	function onSiteChange() {
-		currentSite = $("#site-select").value || null;
+	async function loadSiteSelector() {
+		if (demoMode || !client) { renderSidebar(); return; }
+		try {
+			const data = await client.request("/api/v0/sites", { forceRefresh: true });
+			sitesList = (data && data.sites) || [];
+		} catch {
+			sitesList = [];
+		}
+		renderSidebar();
+	}
+
+	function onSiteChange(cname) {
+		currentSite = cname || null;
 		if (client) client.site = currentSite;
 		if (config) {
 			config.site = currentSite;
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 		}
 		if (config && !demoMode) APIClient.clearCache(config.baseURL);
-		$("#site-name").textContent = currentSite || (config && config.baseURL ? config.baseURL.replace(/^https?:\/\//, "") : "");
+		closeSidebar();
+		renderSidebar();
 		loadData();
+	}
+
+	function openSidebar() {
+		const aside = $("#sidebar");
+		const toggle = $("#sidebar-toggle");
+		const backdrop = $("#sidebar-backdrop");
+		sidebarOpen = true;
+		if (aside) aside.classList.add("open");
+		if (toggle) toggle.setAttribute("aria-expanded", "true");
+		if (backdrop) backdrop.hidden = false;
+		const first = $("#sidebar-nav .sidebar-item");
+		if (first) first.focus();
+	}
+
+	function closeSidebar() {
+		if (!sidebarOpen) return;
+		sidebarOpen = false;
+		const aside = $("#sidebar");
+		const toggle = $("#sidebar-toggle");
+		const backdrop = $("#sidebar-backdrop");
+		if (aside) aside.classList.remove("open");
+		if (toggle) toggle.setAttribute("aria-expanded", "false");
+		if (backdrop) backdrop.hidden = true;
+		if (toggle) toggle.focus();
+	}
+
+	function initSidebar() {
+		const toggle = $("#sidebar-toggle");
+		const backdrop = $("#sidebar-backdrop");
+		const nav = $("#sidebar-nav");
+		if (toggle) toggle.addEventListener("click", () => { sidebarOpen ? closeSidebar() : openSidebar(); });
+		if (backdrop) backdrop.addEventListener("click", closeSidebar);
+		if (nav) nav.addEventListener("click", (e) => {
+			const btn = e.target.closest(".sidebar-item");
+			if (!btn) return;
+			onSiteChange(btn.dataset.site || null);
+		});
+		document.addEventListener("keydown", (e) => {
+			if (e.key === "Escape" && sidebarOpen) closeSidebar();
+		});
+	}
+
+	function syncTopbarHeight() {
+		const tb = $(".topbar");
+		if (tb) document.documentElement.style.setProperty("--topbar-h", tb.offsetHeight + "px");
 	}
 
 	// --------------------------------------------------------------- main load
@@ -1003,11 +1176,10 @@
 		$("#demo-banner").hidden = !demoMode;
 		applyLang();
 		applyTheme();
-		$("#site-name").textContent = demoMode ? "Demo site" : (currentSite || config.baseURL.replace(/^https?:\/\//, ""));
+		syncTopbarHeight();
 		$("#range-seg").addEventListener("click", onRangeChange);
 		$("#custom-start").addEventListener("change", onCustomChange);
 		$("#custom-end").addEventListener("change", onCustomChange);
-		$("#site-select").addEventListener("change", onSiteChange);
 		$("#refresh-btn").addEventListener("click", () => {
 			if (config && !demoMode) APIClient.clearCache(config.baseURL);
 			refreshTick++;
@@ -1384,6 +1556,8 @@
 	function boot() {
 		applyLang();
 		applyTheme();
+		initSidebar();
+		window.addEventListener("resize", syncTopbarHeight);
 		try {
 			const saved = localStorage.getItem(STORAGE_KEY);
 			if (saved) {

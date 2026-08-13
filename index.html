@@ -47,11 +47,11 @@
 	<div id="dash-screen" hidden>
 		<header class="topbar">
 			<div class="topbar-left">
+				<button id="sidebar-toggle" class="icon-btn hamburger" aria-expanded="false" hidden>☰</button>
 				<div class="brand small">
 					<div class="brand-mark small">G</div>
-					<div class="site-name" id="site-name"></div>
+					<div class="brand-name">Goatdash</div>
 				</div>
-				<select id="site-select" class="site-select" title="Site" hidden aria-label="Site"></select>
 				<nav class="seg" id="range-seg" role="tablist">
 					<button role="tab" data-preset="today" class="seg-btn" data-i18n="range.today">Hoy</button>
 					<button role="tab" data-preset="7d" class="seg-btn seg-active" data-i18n="range.d7">7d</button>
@@ -86,7 +86,12 @@
 
 		<div id="error-banner" class="error-banner" hidden></div>
 
-		<main class="dashboard" id="dashboard">
+		<div class="shell">
+			<aside class="sidebar" id="sidebar" hidden>
+				<nav class="sidebar-nav" id="sidebar-nav" aria-label="Sitios"></nav>
+			</aside>
+			<div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+			<main class="dashboard" id="dashboard">
 			<div class="grid-kpis" id="grid-kpis"></div>
 			<div class="chart-wrap card" id="traffic-card">
 				<div class="card-head">
@@ -134,7 +139,8 @@
 				</div>
 				<div class="card-body" id="campaigns-body"></div>
 			</div>
-		</main>
+			</main>
+		</div>
 
 		<footer class="foot" data-i18n="foot">Goatdash · dashboard de GoatCounter · código abierto</footer>
 	</div>
