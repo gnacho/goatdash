@@ -317,6 +317,26 @@ body { min-height: 100vh; }
 .menu-item.danger { color: var(--danger); }
 
 /* ---------- Topbar theme switch ---------- */
+/* Móvil: toggle binario Sol/Luna (issue #2); el switch de 3 opciones
+   con etiquetas queda en ≥641px. */
+.theme-toggle-mobile {
+	display: none;
+	width: 30px;
+	height: 30px;
+	border: 1px solid var(--border);
+	border-radius: 9px;
+	background: var(--bg-elev2);
+	color: var(--text-muted);
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex: none;
+}
+.theme-toggle-mobile:hover { color: var(--text); }
+.theme-toggle-mobile .sun,
+.theme-toggle-mobile .moon { display: none; }
+:root[data-theme="light"] .theme-toggle-mobile .sun { display: block; }
+:root[data-theme="dark"] .theme-toggle-mobile .moon { display: block; }
 .theme-switch {
 	display: inline-flex;
 	align-items: center;
@@ -876,6 +896,8 @@ body { min-height: 100vh; }
 	}
 }
 @media (max-width: 640px) {
+	.theme-switch { display: none; }
+	.theme-toggle-mobile { display: inline-flex; }
 	.grid-kpis { grid-template-columns: 1fr; }
 	.grid-7-3 { grid-template-columns: 1fr; }
 	.grid-3 { grid-template-columns: 1fr; }

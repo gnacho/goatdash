@@ -34,6 +34,8 @@
 			"theme.dark": "Oscuro",
 			"theme.light": "Claro",
 			"theme.auto": "Auto",
+			"theme.toLight": "Cambiar a tema claro",
+			"theme.toDark": "Cambiar a tema oscuro",
 			"menu.disconnect": "Desconectar",
 			"menu.settings": "Ajustes",
 			"menu.about": "Acerca de",
@@ -140,6 +142,8 @@
 			"theme.dark": "Dark",
 			"theme.light": "Light",
 			"theme.auto": "Auto",
+			"theme.toLight": "Switch to light theme",
+			"theme.toDark": "Switch to dark theme",
 			"menu.disconnect": "Disconnect",
 			"menu.settings": "Settings",
 			"menu.about": "About",
@@ -318,6 +322,14 @@
 			btn.classList.toggle("active", active);
 			btn.setAttribute("aria-pressed", String(active));
 		});
+		const mobileToggle = $("#theme-toggle-mobile");
+		if (mobileToggle) {
+			const eff = theme === "auto" ? resolveTheme() : theme;
+			mobileToggle.setAttribute(
+				"aria-label",
+				eff === "dark" ? t("theme.toLight") : t("theme.toDark"),
+			);
+		}
 	}
 
 	function applyLang() {
@@ -1986,6 +1998,16 @@
 				closeSubmenus();
 			});
 		});
+		const mobileToggle = $("#theme-toggle-mobile");
+		if (mobileToggle) {
+			mobileToggle.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const eff = theme === "auto" ? resolveTheme() : theme;
+				theme = eff === "dark" ? "light" : "dark";
+				applyTheme();
+				closeSubmenus();
+			});
+		}
 		document.querySelectorAll("[data-lang-option]").forEach((btn) => {
 			btn.addEventListener("click", (e) => {
 				e.stopPropagation();
