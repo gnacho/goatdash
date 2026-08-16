@@ -8,9 +8,10 @@
   const root = document.documentElement;
 
   /* Capturas: orden de las vistas + alt por idioma */
-  const SLIDES = ['main', 'referrers', 'sidebar', 'geo'];
+  const SLIDES = ['main', 'map', 'referrers', 'sidebar', 'geo'];
   const SHOT_ALT = {
     main: { es: 'Vista principal del dashboard: cinco tarjetas de KPI, gráfico de tráfico y tarjeta de referencias', en: 'Main dashboard view: five KPI cards, traffic chart and the referrers card' },
+    map: { es: 'Mapa mundial coroplético con países sombreados por número de visitas', en: 'Choropleth world map with countries shaded by visit count' },
     referrers: { es: 'Tarjeta de referencias con los canales Directo, Buscadores, Campañas y Otros sitios', en: 'Referrers card with the Direct, Search engines, Campaigns and Other sites channels' },
     sidebar: { es: 'Dashboard con la barra lateral abierta, listando la cuenta y sus subsitios', en: 'Dashboard with the sidebar open, listing the account and its subsites' },
     geo: { es: 'Mapa mundial coroplético sombreado por visitas junto a la lista de países principales', en: 'Choropleth world map shaded by visits next to the top countries list' }
