@@ -832,6 +832,14 @@ body { min-height: 100vh; }
 	font-size: 0.82rem;
 }
 .detail-panel h4 { margin: 0 0 6px; font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
+.detail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.detail-head h4 { margin: 0; }
+.detail-back {
+	background: none; border: 0; color: var(--accent);
+	font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; padding: 0;
+	white-space: nowrap;
+}
+.detail-back:hover { text-decoration: underline; }
 .detail-row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
 .detail-row .dname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail-row .dcount { font-family: var(--font-mono); font-size: 0.78rem; flex: none; }

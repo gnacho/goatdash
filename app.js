@@ -93,6 +93,7 @@
 			"top.direct": "(directo)",
 			"top.unknown": "(desconocido)",
 			"detail.breakdown": "Desglose de {name}",
+			"detail.back": "Volver",
 			"detail.noData": "Sin datos de detalle.",
 			"err.failed": "No se pudo cargar",
 			"err.retry": "↻ Reintentar",
@@ -208,6 +209,7 @@
 			"top.direct": "(direct)",
 			"top.unknown": "(unknown)",
 			"detail.breakdown": "{name} breakdown",
+			"detail.back": "Back",
 			"detail.noData": "No detail data.",
 			"err.failed": "Failed to load",
 			"err.retry": "↻ Retry",
@@ -286,6 +288,7 @@
 	let trafficCache = {};    // preset -> { points, total }
 	let sidebarOpen = false;  // móvil: sheet desplegado
 	let pathFilter = null;    // { names: string[], label: string } o null (todas las rutas)
+	let donutState = {};      // page -> { items, total } último render de cada dona
 	const t = (key, vars) => {
 		let s = (I18N[currentLang()] || I18N.es)[key];
 		if (s === undefined) s = key;
@@ -1093,6 +1096,7 @@
 	function renderDonut(container, items, { total, page, onDrill }) {
 		container.innerHTML = "";
 		if (!items || !items.length) { container.appendChild(emptyEl(t("no.data"))); return; }
+		donutState[page] = { items, total };
 		const palette = [
 			["#7eb2e0", "#2b5884"], ["#3fb950", "#1a7f37"], ["#e3b341", "#9e7b1c"],
 			["#d29922", "#9a6b11"], ["#a371f7", "#6e3fc2"], ["#f778ba", "#c4348a"],
@@ -1839,7 +1843,17 @@
 			container.innerHTML = "";
 			const d = document.createElement("div");
 			d.className = "detail-panel";
-			d.innerHTML = `<h4>${t("detail.breakdown", { name: item.name })}</h4>`;
+			const head = document.createElement("div");
+			head.className = "detail-head";
+			const title = document.createElement("h4");
+			title.textContent = t("detail.breakdown", { name: item.name });
+			const back = document.createElement("button");
+			back.type = "button";
+			back.className = "detail-back";
+			back.textContent = t("detail.back");
+			back.addEventListener("click", () => closeDonutDetail(page));
+			head.append(title, back);
+			d.appendChild(head);
 			if (rows && rows.length) {
 				const max = Math.max(...rows.map((r) => r.count), 1);
 				rows.forEach((r) => {
@@ -1863,7 +1877,17 @@
 		container.innerHTML = "";
 		const panel = document.createElement("div");
 		panel.className = "detail-panel";
-		panel.innerHTML = `<h4>${t("detail.breakdown", { name: label })}</h4>`;
+		const head = document.createElement("div");
+		head.className = "detail-head";
+		const title = document.createElement("h4");
+		title.textContent = t("detail.breakdown", { name: label });
+		const back = document.createElement("button");
+		back.type = "button";
+		back.className = "detail-back";
+		back.textContent = t("detail.back");
+		back.addEventListener("click", () => closeDonutDetail(page));
+		head.append(title, back);
+		panel.appendChild(head);
 		container.appendChild(panel);
 		try {
 			const range = getDateRange(currentPreset, customStart, customEnd);
@@ -1885,6 +1909,14 @@
 			if (e.kind === "auth") return handleAuthError(e.message);
 			panel.appendChild(emptyEl(t("detail.noData")));
 		}
+	}
+
+	function closeDonutDetail(page) {
+		const container = $({ browsers: "#browsers-body", systems: "#systems-body", sizes: "#sizes-body" }[page]);
+		if (!container) return;
+		const saved = donutState[page];
+		if (!saved) return;
+		renderDonut(container, saved.items, { total: saved.total, page, onDrill: (item, idx) => drillDetail(page, item, idx) });
 	}
 
 	function renderPages(hits) {
