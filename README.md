@@ -49,12 +49,12 @@ Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it 
 - **Five KPI cards**: unique visitors (with trend vs the previous period), pageviews, top page, tracked paths and total events, in a gapless grid.
 - **Top referrers by channel**: global referrers grouped into direct, search engines, campaigns and other sites, with a drill-down from each referrer to the pages it brought.
 - **Drill-down on every card**: pages to their referrers, browsers/systems/devices to versions, countries to regions, campaigns to their referrer URLs.
-- **Choropleth world map**: countries shaded by visits with a square-root scale so small markets stay visible, plus hover tooltips and a gradient legend.
+- **Choropleth world map**: countries shaded by visits with a square-root scale so small markets stay visible, plus hover tooltips, a gradient legend, zoom, pan and reset.
 - **Flexible ranges**: today, 7d, 30d, 90d or a custom start/end date.
 - **Tri-state theme with anti-FOUC**: dark, light or auto, switched in the topbar (labeled buttons, icons only on mobile) and applied before paint by an external `theme.js` script that works with a strict `default-src 'self'` CSP.
 - **Instant reloads**: a tiny service worker serves the app shell from the browser (HTML network-first so you always get the deployed version, versioned assets cache-first), and API responses are cached per range with stale-while-revalidate, so a reload paints in milliseconds even on a slow connection.
 - **Language**: ES/EN/Auto UI, persisted in localStorage.
-- **Settings menu with About**: the gear menu opens About, which shows the version (0.68.0) and a link to the source.
+- **Settings menu with About**: the gear menu opens About, which shows the version (0.70.0) and a link to the source.
 - **Signed-in user in the topbar**: a chip with your avatar and email from `/api/v0/me`.
 - **Demo mode**: one click loads the full dashboard with realistic sample data, no API key needed.
 - **Polite to the API**: 60-second response cache, a small concurrent client that reads `X-Rate-Limit-Remaining` and `Retry-After` and adapts so it never exceeds the server limit, per-card retry and an "updated Xs ago" freshness indicator.
