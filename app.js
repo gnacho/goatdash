@@ -93,6 +93,7 @@
 			"top.direct": "(directo)",
 			"top.unknown": "(desconocido)",
 			"detail.breakdown": "Desglose de {name}",
+			"detail.back": "Volver",
 			"detail.noData": "Sin datos de detalle.",
 			"err.failed": "No se pudo cargar",
 			"err.retry": "↻ Reintentar",
@@ -208,6 +209,7 @@
 			"top.direct": "(direct)",
 			"top.unknown": "(unknown)",
 			"detail.breakdown": "{name} breakdown",
+			"detail.back": "Back",
 			"detail.noData": "No detail data.",
 			"err.failed": "Failed to load",
 			"err.retry": "↻ Retry",
@@ -286,6 +288,7 @@
 	let trafficCache = {};    // preset -> { points, total }
 	let sidebarOpen = false;  // móvil: sheet desplegado
 	let pathFilter = null;    // { names: string[], label: string } o null (todas las rutas)
+	let donutState = {};      // page -> { items, total } último render de cada dona
 	const t = (key, vars) => {
 		let s = (I18N[currentLang()] || I18N.es)[key];
 		if (s === undefined) s = key;
@@ -1093,6 +1096,7 @@
 	function renderDonut(container, items, { total, page, onDrill }) {
 		container.innerHTML = "";
 		if (!items || !items.length) { container.appendChild(emptyEl(t("no.data"))); return; }
+		donutState[page] = { items, total };
 		const palette = [
 			["#7eb2e0", "#2b5884"], ["#3fb950", "#1a7f37"], ["#e3b341", "#9e7b1c"],
 			["#d29922", "#9a6b11"], ["#a371f7", "#6e3fc2"], ["#f778ba", "#c4348a"],
@@ -1838,8 +1842,10 @@
 			const rows = demoDetails ? demoDetails[item.name] : null;
 			container.innerHTML = "";
 			const d = document.createElement("div");
-			d.className = "detail-panel";
-			d.innerHTML = `<h4>${t("detail.breakdown", { name: item.name })}</h4>`;
+			d.className = "detail-panel detail-donut";
+			const title = document.createElement("h4");
+			title.textContent = t("detail.breakdown", { name: item.name });
+			d.appendChild(title);
 			if (rows && rows.length) {
 				const max = Math.max(...rows.map((r) => r.count), 1);
 				rows.forEach((r) => {
@@ -1851,6 +1857,12 @@
 			} else {
 				d.appendChild(emptyEl(t("detail.noData")));
 			}
+			const back = document.createElement("button");
+			back.type = "button";
+			back.className = "detail-back";
+			back.textContent = t("detail.back");
+			back.addEventListener("click", () => closeDonutDetail(page));
+			d.appendChild(back);
 			container.appendChild(d);
 			return;
 		}
@@ -1862,8 +1874,15 @@
 		if (!container) return;
 		container.innerHTML = "";
 		const panel = document.createElement("div");
-		panel.className = "detail-panel";
-		panel.innerHTML = `<h4>${t("detail.breakdown", { name: label })}</h4>`;
+		panel.className = "detail-panel detail-donut";
+		const title = document.createElement("h4");
+		title.textContent = t("detail.breakdown", { name: label });
+		panel.appendChild(title);
+		const back = document.createElement("button");
+		back.type = "button";
+		back.className = "detail-back";
+		back.textContent = t("detail.back");
+		back.addEventListener("click", () => closeDonutDetail(page));
 		container.appendChild(panel);
 		try {
 			const range = getDateRange(currentPreset, customStart, customEnd);
@@ -1871,7 +1890,11 @@
 			const path = `/api/v0/stats/${page}/${encodeURIComponent(apiId)}${url.slice(url.indexOf("?"))}`;
 			const res = await client.request(path);
 			const rows = res.stats || [];
-			if (!rows.length) { panel.appendChild(emptyEl(t("detail.noData"))); return; }
+			if (!rows.length) {
+				panel.appendChild(emptyEl(t("detail.noData")));
+				panel.appendChild(back);
+				return;
+			}
 			const max = Math.max(...rows.map((r) => r.count), 1);
 			rows.slice(0, 8).forEach((r) => {
 				const ro = document.createElement("div");
@@ -1881,10 +1904,20 @@
 				ro.append(nm, cnt);
 				panel.appendChild(ro);
 			});
+			panel.appendChild(back);
 		} catch (e) {
 			if (e.kind === "auth") return handleAuthError(e.message);
 			panel.appendChild(emptyEl(t("detail.noData")));
+			panel.appendChild(back);
 		}
+	}
+
+	function closeDonutDetail(page) {
+		const container = $({ browsers: "#browsers-body", systems: "#systems-body", sizes: "#sizes-body" }[page]);
+		if (!container) return;
+		const saved = donutState[page];
+		if (!saved) return;
+		renderDonut(container, saved.items, { total: saved.total, page, onDrill: (item, idx) => drillDetail(page, item, idx) });
 	}
 
 	function renderPages(hits) {

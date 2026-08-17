@@ -831,7 +831,31 @@ body { min-height: 100vh; }
 	border-radius: 7px;
 	font-size: 0.82rem;
 }
+.detail-panel.detail-donut { margin-left: 0; }
+.detail-panel.detail-donut .detail-back {
+	width: fit-content;
+	min-width: 60%;
+	margin: 12px auto 0;
+}
 .detail-panel h4 { margin: 0 0 6px; font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
+.detail-back {
+	display: block;
+	width: 100%;
+	margin: 12px 0 0;
+	padding: 10px 18px;
+	border-radius: var(--radius-sm);
+	border: 1px solid var(--accent);
+	background: transparent;
+	color: var(--accent);
+	font: inherit;
+	font-size: 0.82rem;
+	font-weight: 600;
+	text-align: center;
+	cursor: pointer;
+	transition: background 0.15s var(--ease), transform 0.1s var(--ease);
+}
+.detail-back:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.detail-back:active { transform: translateY(1px); }
 .detail-row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
 .detail-row .dname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .detail-row .dcount { font-family: var(--font-mono); font-size: 0.78rem; flex: none; }
