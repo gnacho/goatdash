@@ -869,7 +869,7 @@ body { min-height: 100vh; }
 /* ---------- World map ---------- */
 .geo-grid {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: 2fr 1fr;
 	gap: var(--gap);
 	align-items: start;
 }
