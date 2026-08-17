@@ -27,6 +27,10 @@
       const key = el.getAttribute('data-i18n-aria');
       if (dict[key]) el.setAttribute('aria-label', dict[key]);
     });
+    document.querySelectorAll('[data-i18n-alt]').forEach(function (el) {
+      const key = el.getAttribute('data-i18n-alt');
+      if (dict[key]) el.setAttribute('alt', dict[key]);
+    });
     root.lang = lang;
     const sel = document.getElementById('langSelect');
     if (sel) sel.value = lang;
@@ -118,13 +122,23 @@
 
   function animateCount(el) {
     const target = parseFloat(el.getAttribute('data-count')) || 0;
-    if (reduceMotion) { el.textContent = String(target); return; }
+    const suffix = el.querySelector('.stat-suffix');
+    const setNum = function (v) {
+      if (suffix) {
+        el.childNodes.forEach(function (n) {
+          if (n.nodeType === 3) n.nodeValue = String(v);
+        });
+      } else {
+        el.textContent = String(v);
+      }
+    };
+    if (reduceMotion) { setNum(target); return; }
     const dur = 900;
     const start = performance.now();
     function tick(now) {
       const t = Math.min((now - start) / dur, 1);
       const eased = 1 - Math.pow(1 - t, 3);
-      el.textContent = String(Math.round(target * eased));
+      setNum(Math.round(target * eased));
       if (t < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
@@ -150,6 +164,20 @@
     io.observe(livePanel);
   }
 
+  /* Contadores de la sección stats (se animan al entrar) */
+  const statsSection = document.querySelector('.stats');
+  const statNums = Array.prototype.slice.call(document.querySelectorAll('.stat .stat-num'));
+  function observeStats() {
+    if (!statsSection || statNums.length === 0) return;
+    if (!('IntersectionObserver' in window)) { statNums.forEach(function (c) { animateCount(c); }); return; }
+    const io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) { statNums.forEach(function (c) { animateCount(c); }); io.disconnect(); }
+      });
+    }, { threshold: 0.4 });
+    io.observe(statsSection);
+  }
+
   /* Freshness "actualizado hace Ns" en el panel vivo */
   function tickFreshness() {
     const el = document.getElementById('liveFoot');
@@ -173,6 +201,9 @@
   function applyShots() {
     document.querySelectorAll('.thumb img').forEach(function (img) {
       img.src = shotUrl(img.dataset.view);
+    });
+    document.querySelectorAll('img[data-shot]').forEach(function (img) {
+      img.src = shotUrl(img.dataset.shot);
     });
     renderShot(shotIndex);
   }
@@ -309,6 +340,7 @@
   applyLang(initialLang());
   drawBars(true);
   observePanel();
+  observeStats();
   tickFreshness();
   renderShot(0);
 
