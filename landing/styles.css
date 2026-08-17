@@ -15,13 +15,13 @@
   --text-primary: 23 32 42;
   --text-secondary: 82 95 110;
   --text-muted: 100 114 130;
-  --accent-data: 190 82 26;
-  --accent-data-soft: 253 243 234;
+  --accent-data: 14 116 144;
+  --accent-data-soft: 224 242 247;
   --accent-brand: 43 88 132;
   --accent-brand-soft: 226 236 246;
   --accent-fg: 255 255 255;
   --ok: 34 122 77;
-  --warn: 194 87 26;
+  --warn: 239 68 68;
   --shadow: 0 1px 0 rgb(var(--border)), 0 12px 32px rgba(15, 23, 42, 0.10);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -34,13 +34,13 @@ html[data-theme="dark"] {
   --text-primary: 238 242 245;
   --text-secondary: 168 180 191;
   --text-muted: 128 141 153;
-  --accent-data: 232 138 74;
-  --accent-data-soft: 62 40 22;
+  --accent-data: 45 212 191;
+  --accent-data-soft: 13 43 51;
   --accent-brand: 126 178 224;
   --accent-brand-soft: 26 40 56;
   --accent-fg: 7 24 18;
   --ok: 78 190 128;
-  --warn: 232 138 74;
+  --warn: 248 113 113;
   --shadow: 0 1px 0 rgb(var(--border)), 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 
