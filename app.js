@@ -1012,6 +1012,7 @@
 		items.forEach((item, idx) => {
 			const row = document.createElement("div");
 			row.className = "list-row";
+			if (item.name) row.dataset.name = item.name;
 			row.setAttribute("role", onRowClick ? "button" : undefined);
 			row.setAttribute("tabindex", onRowClick ? 0 : undefined);
 			const chev = document.createElement("span"); chev.className = "chevron";
@@ -1061,6 +1062,7 @@
 		items.forEach((item, idx) => {
 			const row = document.createElement("div");
 			row.className = "list-row";
+			if (item.name) row.dataset.name = item.name;
 			row.setAttribute("role", opts.onRowClick ? "button" : undefined);
 			row.setAttribute("tabindex", opts.onRowClick ? 0 : undefined);
 			const chev = document.createElement("span"); chev.className = "chevron";
@@ -1185,7 +1187,7 @@
 		container.appendChild(wrap);
 	}
 
-	function renderWorldMap(container, stats, total) {
+	function renderWorldMap(container, stats, total, onPathClick) {
 		container.innerHTML = "";
 		if (!window.WORLD_MAP_PATHS) return;
 		const counts = {};
@@ -1211,6 +1213,10 @@
 				path.setAttribute("fill-opacity", opacity.toFixed(3));
 			}
 			if (code === highlightCode) path.setAttribute("class", "map-selected");
+			if (has && onPathClick) {
+				path.style.cursor = "pointer";
+				path.addEventListener("click", () => onPathClick(code));
+			}
 			path.addEventListener("mouseenter", (e) => {
 				if (!has) return;
 				const name = Object.keys(counts).find((k) => countryNameToCode(k) === code);
@@ -1236,7 +1242,38 @@
 		const mapCol = document.createElement("div");
 		const listCol = document.createElement("div");
 
-		renderWorldMap(mapCol, stats, total);
+		function openCountry(name, fromMap) {
+			if (!clientOrDemo && !demoMode) return;
+			const item = (stats || []).find((s) => s.name === name);
+			if (!item) return;
+			const code = countryNameToCode(name);
+			if (!code) return;
+			const row = listCol.querySelector(`.list-row[data-name="${CSS.escape(name)}"]`);
+			if (row && fromMap) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+			if (fromMap) {
+				listCol.querySelectorAll(".list-row.open").forEach((r) => {
+					if (r !== row) { r.querySelector(".detail-panel")?.remove(); r.classList.remove("open"); }
+				});
+			}
+			toggleDetail(row || document.createElement("div"), "locations", item.id || item.name, item.name, { demo: demoMode ? GOATDASH_DEMO.locationDetails[item.name] : null, kind: "stats" });
+			highlightCode = code;
+			mapCol.innerHTML = "";
+			renderWorldMap(mapCol, stats, total, (clickedCode) => {
+				const clickedItem = (stats || []).find((s) => countryNameToCode(s.name) === clickedCode);
+				if (clickedItem) openCountry(clickedItem.name, true);
+			});
+		}
+
+		const counts = {};
+		(stats || []).forEach((s) => {
+			const code = countryNameToCode(s.name);
+			if (code) counts[code] = s.count;
+		});
+
+		renderWorldMap(mapCol, stats, total, (code) => {
+			const item = (stats || []).find((s) => countryNameToCode(s.name) === code);
+			if (item) openCountry(item.name, true);
+		});
 		geo.appendChild(mapCol);
 
 		const listItems = (stats || []).map((s) => ({ ...s }));
@@ -1244,14 +1281,7 @@
 			total,
 			prefix: (i) => flagFor(i.name),
 			page: "locations",
-			onRowClick: (item, row) => {
-				if (!clientOrDemo && !demoMode) return;
-				const apiId = item.id || item.name;
-				toggleDetail(row, "locations", apiId, item.name, { demo: demoMode ? GOATDASH_DEMO.locationDetails[item.name] : null, kind: "stats" });
-				highlightCode = countryNameToCode(item.name);
-				mapCol.innerHTML = "";
-				renderWorldMap(mapCol, stats, total);
-			},
+			onRowClick: (item, row) => openCountry(item.name, false),
 		});
 		geo.appendChild(listCol);
 		container.appendChild(geo);
