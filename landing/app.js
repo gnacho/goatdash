@@ -335,6 +335,48 @@
     });
   }
 
+  /* ---------- Partículas del hero ---------- */
+  function spawnParticles() {
+    const hero = document.querySelector('.hero');
+    if (!hero || reduceMotion) return;
+    const colors = ['#2b5884', '#0e7490', '#7c3aed', '#db2777', '#059669', '#0891b2'];
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('span');
+      p.className = 'particle';
+      const size = 3 + Math.random() * 5;
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.left = (8 + Math.random() * 84) + '%';
+      p.style.top = (45 + Math.random() * 45) + '%';
+      p.style.background = colors[i % colors.length];
+      p.style.setProperty('--px', (Math.random() * 40 - 20).toFixed(0) + 'px');
+      p.style.animationDuration = (4 + Math.random() * 5).toFixed(1) + 's';
+      p.style.animationDelay = (Math.random() * 6).toFixed(1) + 's';
+      hero.appendChild(p);
+    }
+  }
+
+  /* ---------- Tilt 3D del mockup (reactivo al ratón) ---------- */
+  const mock = document.querySelector('.hero-mock');
+  if (mock && !reduceMotion && window.matchMedia('(pointer: fine)').matches) {
+    const frame = mock.querySelector('.mock-frame');
+    const maxRotate = 7;
+    let raf = null;
+    mock.addEventListener('mousemove', function (e) {
+      const r = mock.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(function () {
+        frame.style.transform = 'perspective(900px) rotateY(' + (px * maxRotate).toFixed(2) + 'deg) rotateX(' + (-py * maxRotate).toFixed(2) + 'deg)';
+      });
+    });
+    mock.addEventListener('mouseleave', function () {
+      if (raf) cancelAnimationFrame(raf);
+      frame.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg)';
+    });
+  }
+
   /* ---------- Arranque ---------- */
   applyTheme(initialTheme());
   applyLang(initialLang());
@@ -342,6 +384,7 @@
   observePanel();
   observeStats();
   tickFreshness();
+  spawnParticles();
   renderShot(0);
 
   function initialTheme() {
