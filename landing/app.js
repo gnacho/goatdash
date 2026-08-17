@@ -287,7 +287,7 @@
   }
 
   /* ---------- Reveal al hacer scroll ---------- */
-  const reveals = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+  const reveals = Array.prototype.slice.call(document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-zoom'));
   if ('IntersectionObserver' in window && !reduceMotion) {
     const ro = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
