@@ -93,6 +93,7 @@
 			"err.banner": "Algunas secciones no cargaron: {keys}. Reintenta cada tarjeta con su botón — una sola petición suele funcionar cuando se rellena el límite de peticiones.",
 			"err.401": "La API key no es válida. Comprueba que copiaste la clave completa sin espacios extra.",
 			"err.403": "La API key no tiene permiso de lectura. Ve a ajustes de tu GoatCounter, pestaña API, y crea una clave con acceso «Read only» o «Count & Read».",
+			"err.forbidden": "Tu API key no tiene acceso a este sitio. Pide al administrador de GoatCounter que la habilite para él.",
 			"err.notfound": "No encontrado: {endpoint}. Comprueba que la URL apunta a tu sitio de GoatCounter (no a una sub-ruta).",
 			"err.rate": "Límite de peticiones alcanzado.",
 			"err.rateBanner": "El servidor está limitando las peticiones. Mostrando datos recientes; reintento en {sec} s.",
@@ -201,6 +202,7 @@
 			"err.banner": "Some sections couldn't load: {keys}. Retry each card individually below — single requests usually succeed once the rate limit refills.",
 			"err.401": "API key not recognized. Please check you copied the full key with no extra spaces.",
 			"err.403": "API key lacks read permission. Go to your GoatCounter settings, API tab, and create a key with “Read only” or “Count & Read” access.",
+			"err.forbidden": "Your API key does not have access to this site. Ask your GoatCounter administrator to enable it.",
 			"err.notfound": "Not found: {endpoint}. Check that the URL points to your GoatCounter site (not a sub-path).",
 			"err.rate": "Rate limit hit.",
 			"err.rateBanner": "The server is rate limiting requests. Showing recent data; retrying in {sec} s.",
@@ -480,7 +482,7 @@
 				const err = new Error(t("err.401")); err.kind = "auth"; throw err;
 			}
 			if (res.status === 403) {
-				const err = new Error(t("err.403")); err.kind = "auth"; throw err;
+				const err = new Error(t("err.forbidden")); err.kind = "forbidden"; throw err;
 			}
 			if (res.status === 404) {
 				const err = new Error(t("err.notfound", { endpoint })); err.kind = "notfound"; throw err;
