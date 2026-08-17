@@ -2181,6 +2181,16 @@
 		applyLang();
 	}
 
+	function isDemoHost() {
+		const h = location.hostname || "";
+		return h === "demo.goatdash.cloudless.club" || h.endsWith(".demo.goatdash.cloudless.club");
+	}
+
+	function enterDemoMode() {
+		demoMode = true;
+		config = { baseURL: "_demo_", apiKey: "_demo_", me: { site: { cname: "Demo site", code: "demo" } } };
+	}
+
 	// ----------------------------------------------------------------- connect
 	function initConnect() {
 		$("#connect-form").addEventListener("submit", async (e) => {
@@ -2319,6 +2329,11 @@
 		initControls();
 		initPathFilter();
 		window.addEventListener("resize", syncTopbarHeight);
+		if (isDemoHost()) {
+			enterDemoMode();
+			loadDashboard();
+			return;
+		}
 		try {
 			const saved = localStorage.getItem(STORAGE_KEY);
 			if (saved) {
