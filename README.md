@@ -54,7 +54,7 @@ Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it 
 - **Tri-state theme with anti-FOUC**: dark, light or auto, switched in the topbar (labeled buttons, icons only on mobile) and applied before paint by an external `theme.js` script that works with a strict `default-src 'self'` CSP.
 - **Instant reloads**: a tiny service worker serves the app shell from the browser (HTML network-first so you always get the deployed version, versioned assets cache-first), and API responses are cached per range with stale-while-revalidate, so a reload paints in milliseconds even on a slow connection.
 - **Language**: ES/EN/Auto UI, persisted in localStorage.
-- **Settings menu with About**: the gear menu opens About, which shows the version (0.58.0) and a link to the source.
+- **Settings menu with About**: the gear menu opens About, which shows the version (0.62.0) and a link to the source.
 - **Signed-in user in the topbar**: a chip with your avatar and email from `/api/v0/me`.
 - **Demo mode**: one click loads the full dashboard with realistic sample data, no API key needed.
 - **Polite to the API**: 60-second response cache, a small concurrent client that reads `X-Rate-Limit-Remaining` and `Retry-After` and adapts so it never exceeds the server limit, per-card retry and an "updated Xs ago" freshness indicator.
