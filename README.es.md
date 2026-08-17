@@ -44,6 +44,7 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 ## Características
 
 - **Dashboard multi-sitio**: barra lateral con la cuenta y sus subsitios desde `/api/v0/sites`. Cada sitio se consulta en su propio dominio vía CORS, con el binario oficial de GoatCounter. También funciona con un solo sitio.
+- **Alcance de sitios por token**: la barra lateral muestra solo los sitios que la API key puede leer (`token.sites` de `/api/v0/me`), así que cada clave se puede restringir a un subconjunto de sitios.
 - **Precache de sitios de la barra lateral**: tras cargar el sitio activo, goatdash calienta en segundo plano la caché del resto de sitios, así que cambiar de sitio es casi instantáneo. Solo pide los endpoints esenciales y se cancela si cambias.
 - **Cinco tarjetas de KPI**: visitantes únicos (con tendencia vs el periodo anterior), páginas vistas, página principal, rutas rastreadas y total de eventos, en una rejilla sin huecos.
 - **Referrers principales por canal**: referrers globales agrupados en directo, buscadores, campañas y otros sitios, con drill desde cada referrer a las páginas que trajo.

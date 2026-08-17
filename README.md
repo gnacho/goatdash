@@ -44,6 +44,7 @@ Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it 
 ## Features
 
 - **Multi-site dashboard**: sidebar with the account and its subsites from `/api/v0/sites`. Each site is queried at its own domain over CORS, using the official GoatCounter binary. Works for one site too.
+- **Per-token site scope**: the sidebar shows only the sites the API key is allowed to read (`token.sites` from `/api/v0/me`), so each key can be restricted to a subset of sites.
 - **Sidebar site precache**: after the active site loads, goatdash warms the cache for the other sites in the background, so switching sites is almost instant. It only fetches the essential endpoints and cancels if you switch.
 - **Five KPI cards**: unique visitors (with trend vs the previous period), pageviews, top page, tracked paths and total events, in a gapless grid.
 - **Top referrers by channel**: global referrers grouped into direct, search engines, campaigns and other sites, with a drill-down from each referrer to the pages it brought.

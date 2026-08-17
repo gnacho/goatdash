@@ -258,6 +258,7 @@
  	let demoPreset = "30d";
  	let currentSite = null;   // selector de sitio: cname o null (cuenta/Host)
  	let sitesList = [];       // [{id, cname}] from /api/v0/sites
+	let allowedSiteIDs = null; // Set de site_id permitidos por el token ([−1] o ausente = todos)
 	let theme = localStorage.getItem(THEME_KEY) || "dark";
 	let currentPreset = "30d";
 	let customStart = "", customEnd = "";
@@ -1452,13 +1453,29 @@
 		}
 	}
 
+	// Sitios que el token puede ver (token.sites de /api/v0/me; [−1] = todos).
+	function deriveTokenScope() {
+		allowedSiteIDs = null;
+		const tok = config && config.me && config.me.token;
+		if (!tok || !Array.isArray(tok.sites) || tok.sites.length === 0) return;
+		const ids = tok.sites.map(Number);
+		if (ids.length === 1 && ids[0] === -1) return; // acceso total
+		allowedSiteIDs = new Set(ids);
+	}
+
 	async function loadSiteSelector() {
 		if (demoMode || !client) { renderSidebar(); return; }
 		try {
 			const data = await client.request("/api/v0/sites", { forceRefresh: true, site: null });
 			sitesList = (data && data.sites) || [];
+			if (allowedSiteIDs) sitesList = sitesList.filter((s) => allowedSiteIDs.has(s.id));
 		} catch {
 			sitesList = [];
+		}
+		if (allowedSiteIDs && currentSite && !sitesList.some((s) => s.cname === currentSite)) {
+			// El sitio guardado ya no lo permite este token: volver a la cuenta.
+			onSiteChange(null);
+			loadData();
 		}
 		renderSidebar();
 	}
@@ -1949,6 +1966,7 @@
 				const c = new APIClient(baseURL, keyRaw);
 				const me = await c.request("/api/v0/me", { retries: 1 });
 				config = { baseURL, apiKey: keyRaw, me };
+				deriveTokenScope();
 				currentSite = config.site || null;
 				c.siteBaseURL = currentSite ? "https://" + currentSite : null;
 				c.onRateLimited = (e) => showRateBanner(e.retryAfter);
@@ -2069,6 +2087,7 @@
 				const cfg = JSON.parse(saved);
 				if (cfg && cfg.baseURL && cfg.apiKey && cfg.baseURL !== "_demo_") {
 					config = cfg;
+					deriveTokenScope();
 					currentSite = cfg.site || null;
 					client = new APIClient(cfg.baseURL, cfg.apiKey);
 					client.siteBaseURL = currentSite ? "https://" + currentSite : null;
