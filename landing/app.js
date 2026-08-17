@@ -78,7 +78,7 @@
       }
     }
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0f1419' : '#faf7f2');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0f1419' : '#fafbfd');
     try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* noop */ }
     applyShots();
   }
