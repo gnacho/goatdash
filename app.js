@@ -253,7 +253,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.72.0";
+	const VERSION = "0.74.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -311,6 +311,7 @@
 	let mapTransformState = null; // { s, tx, ty } del mapa visible
 	let mapDragMoved = false;
 	let mapDragSuppressClick = false;
+	let geoResizeObserver = null;
 	let trafficCache = {};    // preset -> { points, total }
 	let sidebarOpen = false;  // móvil: sheet desplegado
 	let pathFilter = null;    // { names: string[], label: string } o null (todas las rutas)
@@ -1438,7 +1439,24 @@
 		const geo = document.createElement("div");
 		geo.className = "geo-grid";
 		const mapCol = document.createElement("div");
+		mapCol.className = "map-col";
 		const listCol = document.createElement("div");
+
+		if (geoResizeObserver) { geoResizeObserver.disconnect(); geoResizeObserver = null; }
+		function syncMapHeight() {
+			const mapWrap = mapCol.querySelector(".map-wrap");
+			if (!mapWrap || !listCol) return;
+			requestAnimationFrame(() => {
+				const sideBySide = window.innerWidth > 900;
+				const natural = mapCol.getBoundingClientRect().width / 2;
+				const listH = listCol.getBoundingClientRect().height;
+				const target = sideBySide ? Math.max(natural, listH) : natural;
+				mapWrap.style.minHeight = target + "px";
+			});
+		}
+		function onListHeightChange() { syncMapHeight(); }
+		geoResizeObserver = new ResizeObserver(onListHeightChange);
+		geoResizeObserver.observe(geo);
 
 		function openCountry(name, fromMap) {
 			if (!clientOrDemo && !demoMode) return;
@@ -1471,6 +1489,7 @@
 				const clickedItem = (stats || []).find((s) => countryNameToCode(s.name) === clickedCode);
 				if (clickedItem) openCountry(clickedItem.name, true);
 			});
+			syncMapHeight();
 		}
 
 		const counts = {};
@@ -1494,6 +1513,7 @@
 			isSelected: (i) => countryNameToCode(i.name) === highlightCode,
 		});
 		geo.appendChild(listCol);
+		syncMapHeight();
 		container.appendChild(geo);
 	}
 
