@@ -874,11 +874,55 @@ body { min-height: 100vh; }
 	align-items: start;
 }
 .map-wrap { position: relative; overflow: hidden; border-radius: var(--radius-sm); }
-.map-wrap svg { display: block; width: 100%; height: auto; }
+.map-wrap svg { display: block; width: 100%; height: auto; touch-action: none; }
+.map-wrap.grabbing { cursor: grabbing; }
+.map-wrap.grabbing path { cursor: grabbing !important; }
 .map-wrap path { transition: fill-opacity 0.2s var(--ease), stroke 0.15s var(--ease); }
 .map-wrap path[data-has="1"] { fill: var(--accent); cursor: pointer; }
 .map-wrap path[data-has="0"] { fill: var(--chart-grid); }
 .map-wrap path[data-has="1"]:hover, .map-wrap path.map-selected { stroke: var(--accent-hover); stroke-width: 1.5; }
+.map-controls {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	z-index: 2;
+}
+.map-btn {
+	width: 28px;
+	height: 28px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-sm);
+	background: var(--bg-elev);
+	color: var(--text);
+	font: inherit;
+	font-size: 1rem;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+	transition: background 0.15s var(--ease), border-color 0.15s var(--ease), transform 0.08s var(--ease);
+}
+.map-btn:hover { background: var(--bg-hover); border-color: var(--accent); }
+.map-btn:active { transform: translateY(1px); }
+.map-hint {
+	position: absolute;
+	bottom: 8px;
+	left: 50%;
+	transform: translateX(-50%);
+	padding: 3px 8px;
+	border-radius: 999px;
+	background: var(--bg-elev);
+	color: var(--text-muted);
+	font-size: 0.68rem;
+	pointer-events: none;
+	opacity: 0.85;
+	white-space: nowrap;
+}
 .map-legend { display: flex; align-items: center; gap: 6px; justify-content: center; padding: 8px 0 0; font-size: 0.72rem; color: var(--text-muted); }
 .map-legend .lg-min { opacity: 0.3; }
 .map-legend .lg-swatch { width: 40px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 25%, transparent), var(--accent)); }
