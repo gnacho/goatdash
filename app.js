@@ -1843,17 +1843,9 @@
 			container.innerHTML = "";
 			const d = document.createElement("div");
 			d.className = "detail-panel";
-			const head = document.createElement("div");
-			head.className = "detail-head";
 			const title = document.createElement("h4");
 			title.textContent = t("detail.breakdown", { name: item.name });
-			const back = document.createElement("button");
-			back.type = "button";
-			back.className = "detail-back";
-			back.textContent = t("detail.back");
-			back.addEventListener("click", () => closeDonutDetail(page));
-			head.append(title, back);
-			d.appendChild(head);
+			d.appendChild(title);
 			if (rows && rows.length) {
 				const max = Math.max(...rows.map((r) => r.count), 1);
 				rows.forEach((r) => {
@@ -1865,6 +1857,12 @@
 			} else {
 				d.appendChild(emptyEl(t("detail.noData")));
 			}
+			const back = document.createElement("button");
+			back.type = "button";
+			back.className = "detail-back";
+			back.textContent = t("detail.back");
+			back.addEventListener("click", () => closeDonutDetail(page));
+			d.appendChild(back);
 			container.appendChild(d);
 			return;
 		}
@@ -1877,17 +1875,14 @@
 		container.innerHTML = "";
 		const panel = document.createElement("div");
 		panel.className = "detail-panel";
-		const head = document.createElement("div");
-		head.className = "detail-head";
 		const title = document.createElement("h4");
 		title.textContent = t("detail.breakdown", { name: label });
+		panel.appendChild(title);
 		const back = document.createElement("button");
 		back.type = "button";
 		back.className = "detail-back";
 		back.textContent = t("detail.back");
 		back.addEventListener("click", () => closeDonutDetail(page));
-		head.append(title, back);
-		panel.appendChild(head);
 		container.appendChild(panel);
 		try {
 			const range = getDateRange(currentPreset, customStart, customEnd);
@@ -1895,7 +1890,11 @@
 			const path = `/api/v0/stats/${page}/${encodeURIComponent(apiId)}${url.slice(url.indexOf("?"))}`;
 			const res = await client.request(path);
 			const rows = res.stats || [];
-			if (!rows.length) { panel.appendChild(emptyEl(t("detail.noData"))); return; }
+			if (!rows.length) {
+				panel.appendChild(emptyEl(t("detail.noData")));
+				panel.appendChild(back);
+				return;
+			}
 			const max = Math.max(...rows.map((r) => r.count), 1);
 			rows.slice(0, 8).forEach((r) => {
 				const ro = document.createElement("div");
@@ -1905,9 +1904,11 @@
 				ro.append(nm, cnt);
 				panel.appendChild(ro);
 			});
+			panel.appendChild(back);
 		} catch (e) {
 			if (e.kind === "auth") return handleAuthError(e.message);
 			panel.appendChild(emptyEl(t("detail.noData")));
+			panel.appendChild(back);
 		}
 	}
 
