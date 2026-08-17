@@ -61,6 +61,12 @@
 			"channel.other": "Otros sitios",
 			"event.badge": "evento",
 			"kpi.events": "Eventos",
+			"filter.placeholder": "Filtrar por ruta…",
+			"filter.clear": "Quitar filtro",
+			"filter.noMatch": "Sin coincidencias",
+			"filter.loading": "Buscando…",
+			"filter.section": "Sección {q} ({n} rutas)",
+			"filter.applied": "Filtrando por: {q}",
 			"ref.empty": "Sin referencias en este rango.",
 			"ref.emptyHint": "Amplía el rango para ver de dónde vienen tus visitas.",
 			"ref.widen": "Ampliar rango",
@@ -170,6 +176,12 @@
 			"channel.other": "Other sites",
 			"event.badge": "event",
 			"kpi.events": "Events",
+			"filter.placeholder": "Filter by path…",
+			"filter.clear": "Clear filter",
+			"filter.noMatch": "No matches",
+			"filter.loading": "Searching…",
+			"filter.section": "Section {q} ({n} paths)",
+			"filter.applied": "Filtering by: {q}",
 			"ref.empty": "No referrers in this range.",
 			"ref.emptyHint": "Widen the range to see where visitors come from.",
 			"ref.widen": "Widen range",
@@ -273,6 +285,7 @@
 	let highlightCode = null;
 	let trafficCache = {};    // preset -> { points, total }
 	let sidebarOpen = false;  // móvil: sheet desplegado
+	let pathFilter = null;    // { names: string[], label: string } o null (todas las rutas)
 	const t = (key, vars) => {
 		let s = (I18N[currentLang()] || I18N.es)[key];
 		if (s === undefined) s = key;
@@ -374,6 +387,14 @@
 		});
 		const aboutClose = $("#about-close");
 		if (aboutClose) aboutClose.setAttribute("aria-label", t("about.close"));
+		const pathInput = $("#path-filter-input");
+		if (pathInput) { pathInput.setAttribute("placeholder", t("filter.placeholder")); pathInput.setAttribute("aria-label", t("filter.placeholder")); }
+		const chipClear = $("#filter-chip-clear");
+		if (chipClear) chipClear.setAttribute("aria-label", t("filter.clear"));
+		if (pathFilter && pathFilter.label) {
+			const chipLabel = $("#filter-chip-label");
+			if (chipLabel) chipLabel.textContent = t("filter.applied", { q: pathFilter.label });
+		}
 	}
 
 	const SUBMENU_TRIGGERS = ["#theme-btn", "#lang-btn", "#lang-toggle"];
@@ -649,18 +670,26 @@
 		const iso = (d) => d.toISOString();
 		const q = `?start=${encodeURIComponent(iso(start))}&end=${encodeURIComponent(iso(end))}`;
 		let path = `/api/v0/stats/${ENDPOINTS[key]}`;
-		if (key === "hits") path += "?limit=20";
+		if (key === "hits") path += pathFilterQS() ? "?limit=100" : "?limit=20";
 		return path + (path.includes("?") ? "&" : "?") + q.replace(/^\?/, "") + extra;
+	}
+
+	// Parámetros de filtro por ruta (match exacto por nombre en GoatCounter):
+	// include_paths=<a>,<b> + path_by_name=true. Vacío si no hay filtro.
+	function pathFilterQS() {
+		if (!pathFilter || !pathFilter.names || !pathFilter.names.length) return "";
+		return "&include_paths=" + encodeURIComponent(pathFilter.names.join(",")) + "&path_by_name=true";
 	}
 
 	// Conjunto completo de endpoints de una carga de sitio (idéntico al de loadData),
 	// para que el precache rellene exactamente las mismas claves de caché.
 	function buildEndpointSet(range) {
 		const prev = getPreviousRange(range.start, range.end);
+		const f = pathFilterQS();
 		return {
-			total: endpointFor("total", range.start, range.end),
-			hits: endpointFor("hits", range.start, range.end),
-			prev: endpointFor("total", prev.start, prev.end),
+			total: endpointFor("total", range.start, range.end, f),
+			hits: endpointFor("hits", range.start, range.end, f),
+			prev: endpointFor("total", prev.start, prev.end, f),
 			languages: endpointFor("languages", range.start, range.end),
 			toprefs: endpointFor("toprefs", range.start, range.end, "&limit=50"),
 			browsers: endpointFor("browsers", range.start, range.end),
@@ -677,7 +706,8 @@
 	// al instante los datos de la visita anterior (stale-while-revalidate) y la
 	// red los refresca por detrás.
 	function cacheNS() {
-		return currentPreset === "custom" ? `c:${customStart || ""}:${customEnd || ""}` : `p:${currentPreset}`;
+		const base = currentPreset === "custom" ? `c:${customStart || ""}:${customEnd || ""}` : `p:${currentPreset}`;
+		return base + (pathFilter ? ":f:" + pathFilter.names.join("|") : "");
 	}
 	function cacheKeyFor(kind, site) {
 		return (site ? `s:${site}:` : "a:") + cacheNS() + ":" + kind;
@@ -1525,6 +1555,14 @@
 			config.site = currentSite;
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 		}
+		// El filtro de rutas es específico del sitio: se limpia al cambiar.
+		if (pathFilter) {
+			pathFilter = null;
+			$("#filter-chip").hidden = true;
+			const input = $("#path-filter-input");
+			if (input) input.value = "";
+		}
+		pathsCache.clear();
 		// Cancela el precache en curso: el sitio clicado tiene prioridad.
 		if (precacheToken) precacheToken.cancelled = true;
 		closeSidebar();
@@ -1869,7 +1907,141 @@
 
 	function renderPagesDemo() {
 		const data = GOATDASH_DEMO.build(demoPreset);
-		renderPages(data.data.hits.hits);
+		let hits = data.data.hits.hits;
+		if (pathFilter) {
+			const lower = pathFilter.names.map((n) => n.toLowerCase());
+			hits = hits.filter((h) => lower.some((n) => (h.path || "").toLowerCase().includes(n)));
+		}
+		renderPages(hits);
+	}
+
+	// ------------------------------------------------------- path filter
+	// Búsqueda de rutas contra /api/v0/paths (match exacto por nombre en la
+	// API: para "secciones" resolvemos el prefijo aquí y pasamos los nombres).
+	let pathsCache = new Map();   // siteKey -> { paths: [...], at: ts }
+
+	async function getAllPaths() {
+		const siteKey = currentSite || "_acct";
+		const now = Date.now();
+		const cached = pathsCache.get(siteKey);
+		if (cached && now - cached.at < 60_000) return cached.paths;
+		const all = [];
+		let after = 0;
+		for (let i = 0; i < 50; i++) {
+			const url = `/api/v0/paths?limit=200` + (after ? `&after=${after}` : "");
+			const res = await client.request(url, { site: currentSite, forceRefresh: true, cacheKey: "paths:" + siteKey + ":" + after });
+			const list = (res && res.paths) || [];
+			all.push(...list);
+			if (!res || !res.more || !list.length) break;
+			after = list[list.length - 1].id;
+		}
+		pathsCache.set(siteKey, { paths: all, at: now });
+		return all;
+	}
+
+	function demoPathSuggestions(q) {
+		const data = GOATDASH_DEMO.build(demoPreset);
+		const seen = new Set();
+		const paths = [];
+		(data.data.hits.hits || []).forEach((h) => {
+			if (h.path && !seen.has(h.path)) { seen.add(h.path); paths.push(h.path); }
+		});
+		const lower = q.toLowerCase();
+		return paths.filter((p) => p.toLowerCase().includes(lower)).slice(0, 8);
+	}
+
+	function renderFilterSuggestions(suggestions) {
+		const box = $("#filter-suggest");
+		box.innerHTML = "";
+		if (!suggestions.length) {
+			const it = document.createElement("div");
+			it.className = "filter-suggest-item muted";
+			it.textContent = t("filter.noMatch");
+			box.appendChild(it);
+			box.hidden = false;
+			return;
+		}
+		suggestions.forEach((s) => {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.className = "filter-suggest-item";
+			b.textContent = s.path || s;
+			if (s.event) {
+				const bd = document.createElement("span"); bd.className = "list-badge"; bd.textContent = t("event.badge");
+				b.appendChild(bd);
+			}
+			b.addEventListener("click", () => { applyPathFilter([s.path || s], s.path || s); box.hidden = true; });
+			box.appendChild(b);
+		});
+		box.hidden = false;
+	}
+
+	function applyPathFilter(names, label) {
+		pathFilter = { names, label };
+		$("#filter-chip-label").textContent = t("filter.applied", { q: label });
+		$("#filter-chip").hidden = false;
+		loadData();
+	}
+
+	function clearPathFilter() {
+		pathFilter = null;
+		$("#filter-chip").hidden = true;
+		$("#path-filter-input").value = "";
+		loadData();
+	}
+
+	async function applyEnterFilter(q) {
+		if (demoMode) { applyPathFilter([q], q); return; }
+		try {
+			const all = await getAllPaths();
+			const lower = q.toLowerCase();
+			const exact = all.find((p) => (p.path || "").toLowerCase() === lower);
+			if (exact) { applyPathFilter([exact.path], exact.path); return; }
+			const prefix = all.filter((p) => (p.path || "").toLowerCase().startsWith(lower)).slice(0, 200);
+			if (prefix.length) applyPathFilter(prefix.map((p) => p.path), lower);
+			else applyPathFilter([q], q);
+		} catch { applyPathFilter([q], q); }
+	}
+
+	let filterDebounce = null;
+
+	function initPathFilter() {
+		const input = $("#path-filter-input");
+		const suggest = $("#filter-suggest");
+		const chipClear = $("#filter-chip-clear");
+		if (!input || !suggest || !chipClear) return;
+
+		input.addEventListener("input", () => {
+			const q = input.value.trim();
+			clearTimeout(filterDebounce);
+			if (!q) { suggest.hidden = true; return; }
+			filterDebounce = setTimeout(async () => {
+				if (demoMode) {
+					renderFilterSuggestions(demoPathSuggestions(q).map((p) => ({ path: p })));
+					return;
+				}
+				try {
+					const all = await getAllPaths();
+					const lower = q.toLowerCase();
+					const matches = all.filter((p) => (p.path || "").toLowerCase().includes(lower)).slice(0, 8);
+					renderFilterSuggestions(matches);
+				} catch { suggest.hidden = true; }
+			}, 250);
+		});
+
+		input.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				const q = input.value.trim();
+				if (!q) return;
+				applyEnterFilter(q);
+				suggest.hidden = true;
+			}
+			if (e.key === "Escape") suggest.hidden = true;
+		});
+
+		input.addEventListener("blur", () => setTimeout(() => { suggest.hidden = true; }, 150));
+		chipClear.addEventListener("click", clearPathFilter);
 	}
 
 	function renderLanguages(stats) {
@@ -2082,6 +2254,7 @@
 		});
 		initSidebar();
 		initControls();
+		initPathFilter();
 		window.addEventListener("resize", syncTopbarHeight);
 		try {
 			const saved = localStorage.getItem(STORAGE_KEY);
