@@ -1827,7 +1827,7 @@
 					else renderDonutErr("browsers", b.reason);
 					if (s.status === "fulfilled") renderDonut($("#systems-body"), s.value.stats, { total: s.value.total, page: "systems", onDrill: (item, idx) => drillDetail("systems", item, idx) });
 					else renderDonutErr("systems", s.reason);
-					if (z.status === "fulfilled") renderDonut($("#sizes-body"), z.value.stats.map((i) => ({ ...i, name: deviceLabel(i.name) })), { total: z.value.total, page: "sizes", onDrill: (item, idx) => drillDetail("sizes", item, idx) });
+					if (z.status === "fulfilled") renderDonut($("#sizes-body"), z.value.stats.map((i) => ({ ...i, name: deviceLabel(i.id || i.name) })), { total: z.value.total, page: "sizes", onDrill: (item, idx) => drillDetail("sizes", item, idx) });
 					else renderDonutErr("sizes", z.reason);
 				}),
 
@@ -2115,7 +2115,7 @@
 	function renderDonutsDemo(data) {
 		renderDonut($("#browsers-body"), data.browsers.stats, { total: data.browsers.total, page: "browsers", onDrill: (item) => drillDetail("browsers", item, 0) });
 		renderDonut($("#systems-body"), data.systems.stats, { total: data.systems.total, page: "systems", onDrill: (item) => drillDetail("systems", item, 0) });
-		renderDonut($("#sizes-body"), data.sizes.stats.map((i) => ({ ...i, name: deviceLabel(i.name) })), { total: data.sizes.total, page: "sizes", onDrill: (item) => drillDetail("sizes", item, 0) });
+		renderDonut($("#sizes-body"), data.sizes.stats.map((i) => ({ ...i, name: deviceLabel(i.id || i.name) })), { total: data.sizes.total, page: "sizes", onDrill: (item) => drillDetail("sizes", item, 0) });
 	}
 
 	function renderGeoDemo(data) {
