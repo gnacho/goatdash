@@ -120,7 +120,21 @@ Requirements: any static web server and a GoatCounter instance whose v0 API is r
 
 `index.html` loads its assets with a version query, for example `app.js?v=3`. On every deploy you must bump that number, or the browser keeps serving the previous JavaScript from its one hour cache and the dashboard breaks. If you serve the index with `Cache-Control: no-store`, the index itself is always fresh and only the versioned assets stay cached.
 
-### Content Security Policy
+### Automatic updates
+
+If you host goatdash on a Linux server with systemd, you can enable the weekly self-updater:
+
+```sh
+# Copy the updater files from the release to a location outside the web root
+cp deploy/goatdash-update.sh /opt/goatcounter-dashboard/deploy/
+cp deploy/goatdash-update.service /etc/systemd/system/
+cp deploy/goatdash-update.timer /etc/systemd/system/
+
+systemctl daemon-reload
+systemctl enable --now goatdash-update.timer
+```
+
+The timer runs once a week, downloads the latest stable GitHub release (`v*`), verifies the SHA256 checksum against `checksums.txt`, backs up the current public folder and swaps it. The frontend also checks GitHub releases once a week and shows a small banner when a newer version is available.
 
 goatdash loads no inline scripts, so a strict `default-src 'self'` covers its own files. The one addition is `connect-src`: it must include every site domain the dashboard queries, because each site is its own origin.
 
