@@ -1,0 +1,8 @@
+[Unit]
+Description=Goatdash weekly update
+
+[Service]
+Type=oneshot
+ExecStart=/opt/goatcounter-dashboard/deploy/goatdash-update.sh
+StandardOutput=append:/var/log/goatdash-update.log
+StandardError=append:/var/log/goatdash-update.log

@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write version.json
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "{\"version\":\"${VERSION}\"}" > version.json
+
+      - name: Create release tarball
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          TMP=$(mktemp -d)
+          mkdir "${TMP}/goatdash"
+          cp -r index.html styles.css theme.js app.js fixtures.js sw.js version.json \
+            assets robots.txt LICENSE LICENSE.world-map "${TMP}/goatdash/"
+          tar -czf "dist/goatdash-${VERSION}.tar.gz" -C "${TMP}" goatdash
+
+      - name: Generate checksums
+        working-directory: dist
+        run: sha256sum goatdash-*.tar.gz > checksums.txt
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

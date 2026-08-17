@@ -6,10 +6,16 @@
 <title>Goatdash</title>
 <meta name="description" content="A privacy-friendly dashboard for GoatCounter analytics. No cookies, no tracking, no servers.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b5884'/%3E%3Cpath d='M11 21V9h2v10h3V7h2v12h3V9h2v12z' fill='white' transform='translate(-1 1)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css?v=35">
-<script src="theme.js?v=35"></script>
+<link rel="stylesheet" href="styles.css?v=36">
+<script src="theme.js?v=36"></script>
 </head>
 <body>
+<div id="update-banner" class="update-banner" hidden>
+	<span id="update-banner-text" class="update-banner-text"></span>
+	<a id="update-banner-link" class="update-banner-link" target="_blank" rel="noopener noreferrer" href="#"></a>
+	<button id="update-banner-reload" class="update-banner-reload" type="button" hidden></button>
+	<button id="update-banner-close" class="update-banner-close" type="button" aria-label="Cerrar">✕</button>
+</div>
 <div id="app">
 	<div id="connect-screen" class="connect" hidden>
 		<header class="connect-head">
@@ -220,8 +226,9 @@
 	</dialog>
 </div>
 
-<script src="assets/world-map.js?v=35"></script>
-<script src="fixtures.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="assets/world-map.js?v=36"></script>
+<script src="fixtures.js?v=36"></script>
+<script src="app.js?v=36"></script>
+<script src="update-check.js?v=36"></script>
 </body>
 </html>
