@@ -1003,7 +1003,7 @@
 		body.appendChild(svg);
 	}
 
-	function renderTopList(container, items, { rank = true, formatName = (i) => i.name, nameSub = () => null, count = (i) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "", badge = () => null } = {}) {
+	function renderTopList(container, items, { rank = true, formatName = (i) => i.name, nameSub = () => null, count = (i) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "", badge = () => null, isSelected = () => false } = {}) {
 		container.innerHTML = "";
 		if (!items || !items.length) { container.appendChild(emptyEl(t("no.data"))); return; }
 		const totalMax = total || Math.max(...items.map((i) => i.count), 1);
@@ -1011,7 +1011,7 @@
 		const list = document.createElement("div");
 		items.forEach((item, idx) => {
 			const row = document.createElement("div");
-			row.className = "list-row";
+			row.className = "list-row" + (isSelected(item) ? " selected" : "");
 			if (item.name) row.dataset.name = item.name;
 			row.setAttribute("role", onRowClick ? "button" : undefined);
 			row.setAttribute("tabindex", onRowClick ? 0 : undefined);
@@ -1051,7 +1051,7 @@
 			btn.addEventListener("click", () => {
 				const c = container;
 				c.innerHTML = "";
-				c.appendChild(renderAllRows(items, { rank, formatName, nameSub, count, total: totalMax, page, onRowClick, prefix, badge }));
+				c.appendChild(renderAllRows(items, { rank, formatName, nameSub, count, total: totalMax, page, onRowClick, prefix, badge, isSelected }));
 			});
 			container.appendChild(btn);
 		}
@@ -1061,7 +1061,7 @@
 		const frag = document.createDocumentFragment();
 		items.forEach((item, idx) => {
 			const row = document.createElement("div");
-			row.className = "list-row";
+			row.className = "list-row" + (opts.isSelected && opts.isSelected(item) ? " selected" : "");
 			if (item.name) row.dataset.name = item.name;
 			row.setAttribute("role", opts.onRowClick ? "button" : undefined);
 			row.setAttribute("tabindex", opts.onRowClick ? 0 : undefined);
@@ -1249,14 +1249,25 @@
 			const code = countryNameToCode(name);
 			if (!code) return;
 			const row = listCol.querySelector(`.list-row[data-name="${CSS.escape(name)}"]`);
-			if (row && fromMap) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
-			if (fromMap) {
-				listCol.querySelectorAll(".list-row.open").forEach((r) => {
-					if (r !== row) { r.querySelector(".detail-panel")?.remove(); r.classList.remove("open"); }
-				});
+			const isSame = highlightCode === code;
+
+			// Quitar cualquier resalte/detalle previo de la lista.
+			listCol.querySelectorAll(".list-row.selected").forEach((r) => r.classList.remove("selected"));
+			listCol.querySelectorAll(".list-row.open").forEach((r) => {
+				r.querySelector(".detail-panel")?.remove();
+				r.classList.remove("open");
+			});
+
+			if (isSame) {
+				highlightCode = null;
+			} else {
+				highlightCode = code;
+				if (row) {
+					row.classList.add("selected");
+					if (fromMap) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+				}
 			}
-			toggleDetail(row || document.createElement("div"), "locations", item.id || item.name, item.name, { demo: demoMode ? GOATDASH_DEMO.locationDetails[item.name] : null, kind: "stats" });
-			highlightCode = code;
+
 			mapCol.innerHTML = "";
 			renderWorldMap(mapCol, stats, total, (clickedCode) => {
 				const clickedItem = (stats || []).find((s) => countryNameToCode(s.name) === clickedCode);
@@ -1282,6 +1293,7 @@
 			prefix: (i) => flagFor(i.name),
 			page: "locations",
 			onRowClick: (item, row) => openCountry(item.name, false),
+			isSelected: (i) => countryNameToCode(i.name) === highlightCode,
 		});
 		geo.appendChild(listCol);
 		container.appendChild(geo);

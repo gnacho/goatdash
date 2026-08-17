@@ -773,6 +773,11 @@ body { min-height: 100vh; }
 	cursor: pointer;
 }
 .list-row:hover { background: var(--bg-elev2); }
+.list-row.selected {
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	outline: 1.5px solid var(--accent);
+	outline-offset: -1.5px;
+}
 .list-row .chevron { color: var(--text-muted); font-size: 0.7rem; transition: transform 0.15s var(--ease); }
 .list-row.open .chevron { transform: rotate(90deg); }
 .list-rank { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.75rem; width: 22px; flex: none; }
