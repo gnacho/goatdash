@@ -245,27 +245,42 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.64.0";
+	const VERSION = "0.66.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
 	const LANG_KEY = "gc-dashboard-lang-v1";
 	const CACHE_PREFIX = "gc-cache:";
 	const CACHE_TTL_MS = 60_000;
-	// Límite del backend (configurado en el servidor): 20 req/s + 5000/h.
-	// Semáforo de concurrencia + espaciado de arranque que deja margen (~7-10
-	// req/s incluyendo preflights), adaptándose a X-Rate-Limit-Remaining.
-	const REQUEST_SPACING_MS = 100;  // intervalo mínimo entre arranques (~10 req/s)
-	// Cross-origin (multi-sitio sin proxy): cada petición dispara un preflight
-	// OPTIONS (cabecera Authorization) que TAMBIÉN consume un token del rate-limit.
-	// Se dobla el espaciado para contar preflight + GET.
-	const REQUEST_SPACING_CROSS_ORIGIN = REQUEST_SPACING_MS * 2;
+	// Límite del backend (configurado en el servidor): 40 req/s + 5000/h.
+	// Semáforo de concurrencia + espaciado de arranque ADAPTATIVO a
+	// X-Rate-Limit-Remaining: cuando el cubo está lleno se va rápido (bases
+	// de abajo); si remaining baja (otra pestaña, precache, pico) el espaciado
+	// se multiplica para no provocar 429. Medido: la API responde en ~90-200ms.
+	// El preflight OPTIONS se cachea 24h (Access-Control-Max-Age) así que cada
+	// GET cross-origin consume 1 token, no 2. Con 30ms cross (~33 req/s) la
+	// ráfaga de ~10 peticiones del sitio activo cabe con margen en el bucket
+	// de 40/s; el adaptativo protege los picos y otras pestañas.
+	const REQUEST_SPACING_MS = 30;   // intervalo mínimo entre arranques (~33 req/s)
+	// Cross-origin (multi-sitio sin proxy): el preflight OPTIONS se cachea 24h
+	// (cabecera Access-Control-Max-Age añadida en nginx), por lo que el coste
+	// extra del cross-origin es mínimo y el espaciado puede igualar al local.
+	const REQUEST_SPACING_CROSS_ORIGIN = 30;
+	// El precache de los otros sitios del sidebar usa su PROPIO reloj, más
+	// espaciado y aislado del de las tarjetas visibles: nunca roba slots a la
+	// carga del sitio activo, y consume poco del cubo compartido. A 100ms
+	// (~10 req/s) con el bucket de 40/s el precache completo (~18 peticiones)
+	// cabe sin provocar 429.
+	const PRECACHE_SPACING_MS = 100;
+	// Si el cubo queda por debajo de este remaining, el espaciado se amplía
+	// para dejar sitio a los demás consumidores y evitar 429 en cascada.
+	const RATE_LOW_WATERMARK = 6;
 	// Nunca aplazar una petición más de 30 s por el rate-limit: si el servidor
 	// pide una espera mayor (p. ej. cubo horario agotado), es mejor fallar
 	// pronto, pintar caché antigua y avisar al usuario que congelarse en
 	// silencio durante minutos.
 	const RATE_WAIT_CAP_MS = 30_000;
-	const MAX_CONCURRENCY = 4;       // peticiones en vuelo simultáneas
+	const MAX_CONCURRENCY = 8;       // peticiones en vuelo simultáneas
 	const DEVICE_LABELS = { phone: "device.phone", tablet: "device.tablet", desktop: "device.desktop", desktophd: "device.desktophd", unknown: "device.unknown" };
 
 	let lang = localStorage.getItem(LANG_KEY) || "auto";   // modo: es | en | auto (auto = default actual)
@@ -446,7 +461,8 @@
 			this._inflight = 0;      // peticiones en vuelo (semáforo de concurrencia)
 			this._waitersHigh = [];  // cola de espera prioritaria (interacción)
 			this._waitersLow = [];   // cola de espera en segundo plano (precache)
-			this._nextStart = 0;     // instante mínimo para arrancar la siguiente petición
+			this._nextStart = 0;     // instante mínimo para arrancar la siguiente petición high
+			this._nextStartLow = 0;  // reloj independiente para el precache (nunca retrasa las high)
 			this._remaining = null;  // última X-Rate-Limit-Remaining vista
 			this._resetAt = 0;       // cuándo se rellena el límite (ms epoch)
 		}
@@ -558,16 +574,24 @@
 			if (next) next();
 		}
 
-		async _space(spacing) {
+		async _space(spacing, priority = "high") {
 			// Reserva atómicamente el siguiente turno de arranque ANTES de dormir,
-			// para que peticiones concurrentes no lean el mismo instante.
+			// para que peticiones concurrentes no lean el mismo instante. El precache
+			// (low) usa su propio reloj: no adelanta el turno de las tarjetas visibles.
+			// Si el cubo del rate-limit está bajo, amplía el espaciado (factor 3) para
+			// no agotarlo entre varios consumidores (pestañas, precache) y evitar 429.
+			const clock = priority === "low" ? "_nextStartLow" : "_nextStart";
 			const now = Date.now();
-			let start = Math.max(this._nextStart, now);
+			let effSpacing = spacing;
+			if (this._remaining !== null && this._remaining <= RATE_LOW_WATERMARK) {
+				effSpacing = spacing * 3;
+			}
+			let start = Math.max(this[clock], now);
 			if (this._remaining === 0 && this._resetAt > start) {
 				// Tope: no congelar la cola entera si el servidor pide esperar minutos.
 				start = Math.min(this._resetAt, now + RATE_WAIT_CAP_MS);
 			}
-			this._nextStart = start + spacing;
+			this[clock] = start + effSpacing;
 			const wait = start - Date.now();
 			if (wait > 0) await new Promise((r) => setTimeout(r, wait));
 		}
@@ -587,7 +611,10 @@
 			try {
 				if (signal && signal.cancelled) return null;
 				const crossOrigin = this._baseFor(site) !== location.origin;
-				await this._space(crossOrigin ? REQUEST_SPACING_CROSS_ORIGIN : REQUEST_SPACING_MS);
+				const spacing = priority === "low"
+					? PRECACHE_SPACING_MS
+					: (crossOrigin ? REQUEST_SPACING_CROSS_ORIGIN : REQUEST_SPACING_MS);
+				await this._space(spacing, priority);
 				if (signal && signal.cancelled) return null;
 				let lastErr;
 				for (let attempt = 0; attempt <= retries; attempt++) {
@@ -1710,6 +1737,7 @@
 		cancelledRef = { current: false };
 		const current = cancelledRef;
 		expandedPage = null;
+		highlightCode = null;
 		progress = { fired: 0, done: 0 };
 		$("#error-banner").hidden = true;
 		$("#traffic-body").innerHTML = "";
@@ -1769,20 +1797,36 @@
 				lastUpdatedAt = Date.now();
 			}
 
+			// Lanza TODAS las peticiones del sitio activo en paralelo desde el
+			// arranque. Cada tarjeta pinta en cuanto llega SU dato (no hay fases
+			// encadenadas): KPIs/gráfico/páginas esperan solo total+hits, la
+			// tendencia/idiomas/referencias su grupo, y las tarjetas inferiores
+			// (donas/geo/campaigns) ya tienen la petición EN VUELO y su render
+			// lazy espera a esa promesa, que suele estar resuelta al scrollear.
+			const fire = (kind) => client.request(eps[kind], { cacheKey: ck(kind) })
+				.catch((e) => ({ __error: e }));
+			const pTotal = fire("total");
+			const pHits = fire("hits");
+			const pPrev = fire("prev");
+			const pLang = fire("languages");
+			const pRef = fire("toprefs");
+			const pBrowsers = fire("browsers");
+			const pSystems = fire("systems");
+			const pSizes = fire("sizes");
+			const pLocations = fire("locations");
+			const pCampaigns = fire("campaigns");
+
 			// Fase crítica: KPIs + gráfico + páginas, solo con total + hits. Para un
 			// sitio precacheado ambas están en caché y el cambio de sitio es inmediato.
-			const [totalRes, hitsRes] = await Promise.allSettled([
-				client.request(eps.total, { cacheKey: ck("total") }),
-				client.request(eps.hits, { cacheKey: ck("hits") }),
-			]);
+			const [totalRes, hitsRes] = await Promise.allSettled([pTotal, pHits]);
 			if (current.cancelled) return;
 			if (totalRes.status === "rejected" && totalRes.reason.kind === "auth") return handleAuthError(totalRes.reason.message);
 			if (hitsRes.status === "rejected" && hitsRes.reason.kind === "auth") return handleAuthError(hitsRes.reason.message);
 			progress.fired = 5; progress.done = 2;
 
 			data = {
-				total: totalRes.status === "fulfilled" ? totalRes.value : { total: 0 },
-				hits: hitsRes.status === "fulfilled" ? hitsRes.value : { hits: [] },
+				total: totalRes.status === "fulfilled" && !totalRes.value.__error ? totalRes.value : { total: 0 },
+				hits: hitsRes.status === "fulfilled" && !hitsRes.value.__error ? hitsRes.value : { hits: [] },
 			};
 			renderKPIs(data, null, group);
 			renderTrafficChart(data, group);
@@ -1790,23 +1834,15 @@
 			lastUpdatedAt = Date.now();
 
 			// Fase secundaria: tendencia (periodo anterior), idiomas y referencias.
-			const [prevRes, langRes, refRes] = await Promise.allSettled([
-				client.request(eps.prev, { cacheKey: ck("prev") }),
-				client.request(eps.languages, { cacheKey: ck("languages") }),
-				client.request(eps.toprefs, { cacheKey: ck("toprefs") }),
-			]);
+			const [prevRes, langRes, refRes] = await Promise.allSettled([pPrev, pLang, pRef]);
 			if (current.cancelled) return;
 			progress.done = 5;
-			data.languages = langRes.status === "fulfilled" ? langRes.value : { stats: [] };
-			prevTotal = prevRes.status === "fulfilled" ? (prevRes.value.total ?? prevRes.value.total_utc ?? null) : null;
+			data.languages = langRes.status === "fulfilled" && !langRes.value.__error ? langRes.value : { stats: [] };
+			prevTotal = prevRes.status === "fulfilled" && !prevRes.value.__error ? (prevRes.value.total ?? prevRes.value.total_utc ?? null) : null;
 			renderKPIs(data, prevTotal, group);
 			renderLanguages(data.languages.stats);
-			renderReferrers(refRes.status === "fulfilled" ? refRes.value.stats : [], null);
+			renderReferrers(refRes.status === "fulfilled" && !refRes.value.__error ? refRes.value.stats : [], null);
 			lastUpdatedAt = Date.now();
-
-			// Tras pintar el sitio activo, calienta en segundo plano la caché del
-			// resto de sitios del sidebar (baja prioridad, cancelable al cambiar).
-			precacheSites();
 
 			// lazy tiers
 			const lazy = async (key, refId, renderFn) => {
@@ -1826,42 +1862,55 @@
 
 			// Tiers lazy en PARALELO entre sí: en un escritorio grande todas las
 			// tarjetas son visibles y encadenarlas alarga el pintado completo.
+			// La petición ya está en vuelo desde el arranque (fire), así que el
+			// render solo espera a que llegue el dato ya solicitado.
 			await Promise.all([
 				lazy("browsers", "#donut-row", async () => {
 					if (current.cancelled) return;
-					const [b, s, z] = await Promise.allSettled([
-						client.request(eps.browsers, { cacheKey: ck("browsers") }),
-						client.request(eps.systems, { cacheKey: ck("systems") }),
-						client.request(eps.sizes, { cacheKey: ck("sizes") }),
-					]);
+					const [b, s, z] = await Promise.allSettled([pBrowsers, pSystems, pSizes]);
 					if (current.cancelled) return;
-					if (b.status === "fulfilled") renderDonut($("#browsers-body"), b.value.stats, { total: b.value.total, page: "browsers", onDrill: (item, idx) => drillDetail("browsers", item, idx) });
-					else renderDonutErr("browsers", b.reason);
-					if (s.status === "fulfilled") renderDonut($("#systems-body"), s.value.stats, { total: s.value.total, page: "systems", onDrill: (item, idx) => drillDetail("systems", item, idx) });
-					else renderDonutErr("systems", s.reason);
-					if (z.status === "fulfilled") renderDonut($("#sizes-body"), z.value.stats.map((i) => ({ ...i, name: deviceLabel(i.id || i.name) })), { total: z.value.total, page: "sizes", onDrill: (item, idx) => drillDetail("sizes", item, idx) });
-					else renderDonutErr("sizes", z.reason);
+					const err = (r) => (r.status === "fulfilled" ? r.value.__error : r.reason);
+					if (b.status === "fulfilled" && !b.value.__error) renderDonut($("#browsers-body"), b.value.stats, { total: b.value.total, page: "browsers", onDrill: (item, idx) => drillDetail("browsers", item, idx) });
+					else renderDonutErr("browsers", err(b));
+					if (s.status === "fulfilled" && !s.value.__error) renderDonut($("#systems-body"), s.value.stats, { total: s.value.total, page: "systems", onDrill: (item, idx) => drillDetail("systems", item, idx) });
+					else renderDonutErr("systems", err(s));
+					if (z.status === "fulfilled" && !z.value.__error) renderDonut($("#sizes-body"), z.value.stats.map((i) => ({ ...i, name: deviceLabel(i.id || i.name) })), { total: z.value.total, page: "sizes", onDrill: (item, idx) => drillDetail("sizes", item, idx) });
+					else renderDonutErr("sizes", err(z));
 				}),
 
 				lazy("locations", "#geo-card", async () => {
 					if (current.cancelled) return;
-					const loc = await client.request(eps.locations, { cacheKey: ck("locations") });
+					const loc = await pLocations;
 					if (current.cancelled) return;
+					if (loc.__error) {
+						if (loc.__error.kind === "auth") return handleAuthError(loc.__error.message);
+						throw loc.__error;
+					}
 					renderGeo($("#geo-body"), loc.stats, loc.total, client);
 				}),
 
 				lazy("campaigns", "#campaigns-card", async () => {
 					if (current.cancelled) return;
-					let camps;
-					try { camps = await client.request(eps.campaigns, { cacheKey: ck("campaigns") }); }
-					catch (e) { if (e.kind === "notfound") { return; } throw e; }
+					const camps = await pCampaigns;
 					if (current.cancelled) return;
+					if (camps.__error) {
+						if (camps.__error.kind === "notfound") return;
+						throw camps.__error;
+					}
 					if (camps.stats && camps.stats.length) {
 						$("#campaigns-card").hidden = false;
 						renderTopList($("#campaigns-body"), camps.stats, { total: camps.total, page: "campaigns", onRowClick: (item, row) => toggleDetail(row, "campaigns", item.id || item.name, item.name, { demo: null, kind: "stats" }) });
 					}
 				}),
 			]);
+
+			// Tras pintar el sitio activo (incluidas las tarjetas lazy), calienta
+			// en segundo plano la caché del resto de sitios del sidebar. Va al FINAL
+			// a propósito: el precache comparte el rate-limit del servidor y, si se
+			// lanza antes, roba slots de arranque a las tarjetas visibles (medido:
+			// ~+300ms en las donas). Su reloj de espaciado es independiente (low) y
+			// es cancelable al cambiar de sitio.
+			precacheSites();
 			updateFreshness();
 		} catch (e) {
 			if (e.kind === "auth") return handleAuthError(e.message);
