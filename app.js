@@ -1842,7 +1842,7 @@
 			const rows = demoDetails ? demoDetails[item.name] : null;
 			container.innerHTML = "";
 			const d = document.createElement("div");
-			d.className = "detail-panel";
+			d.className = "detail-panel detail-donut";
 			const title = document.createElement("h4");
 			title.textContent = t("detail.breakdown", { name: item.name });
 			d.appendChild(title);
@@ -1874,7 +1874,7 @@
 		if (!container) return;
 		container.innerHTML = "";
 		const panel = document.createElement("div");
-		panel.className = "detail-panel";
+		panel.className = "detail-panel detail-donut";
 		const title = document.createElement("h4");
 		title.textContent = t("detail.breakdown", { name: label });
 		panel.appendChild(title);

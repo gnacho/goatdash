@@ -831,6 +831,12 @@ body { min-height: 100vh; }
 	border-radius: 7px;
 	font-size: 0.82rem;
 }
+.detail-panel.detail-donut { margin-left: 0; }
+.detail-panel.detail-donut .detail-back {
+	width: fit-content;
+	min-width: 60%;
+	margin: 12px auto 0;
+}
 .detail-panel h4 { margin: 0 0 6px; font-size: 0.82rem; color: var(--text-muted); font-weight: 600; }
 .detail-back {
 	display: block;
