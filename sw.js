@@ -10,7 +10,7 @@
 //    se sube en cada deploy), así que cachearlos es siempre correcto.
 //  - /api/: NUNCA se cachea aquí; la app gestiona su propia caché en
 //    localStorage (stale-while-revalidate por preset).
-const CACHE = "goatdash-v11";
+const CACHE = "goatdash-v12";
 const SHELL = ["/", "/index.html", "/styles.css", "/theme.js", "/app.js", "/fixtures.js", "/update-check.js", "/version.json", "/assets/world-map.js"];
 
 self.addEventListener("install", (e) => {

@@ -871,10 +871,24 @@ body { min-height: 100vh; }
 	display: grid;
 	grid-template-columns: 2fr 1fr;
 	gap: var(--gap);
-	align-items: start;
+	align-items: stretch;
 }
-.map-wrap { position: relative; overflow: hidden; border-radius: var(--radius-sm); }
-.map-wrap svg { display: block; width: 100%; height: auto; touch-action: none; }
+.map-col {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+.map-wrap {
+	position: relative;
+	overflow: hidden;
+	border-radius: var(--radius-sm);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+.map-wrap svg { display: block; height: 100%; width: auto; touch-action: none; }
 .map-wrap.grabbing { cursor: grabbing; }
 .map-wrap.grabbing path { cursor: grabbing !important; }
 .map-wrap path { transition: fill-opacity 0.2s var(--ease), stroke 0.15s var(--ease); }
