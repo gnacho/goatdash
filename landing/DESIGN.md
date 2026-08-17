@@ -54,9 +54,16 @@ tema claro/oscuro. Vive en `landing/` dentro del repo `gnacho/goatdash`.
 
 ## Fase 2 · Craft
 
-- **Layout:** una columna centrada (max-width ~64rem) con secciones apiladas;
-  hero a dos columnas (texto + panel vivo) en desktop, apilado en móvil.
-  Comparativa en tabla por bloques, lado honesto al final.
+- **Layout (estructura app-landing, patrón Alice):** navbar fija con 5 enlaces
+  (Funciones/Capturas/Comparativa/Precio/FAQ) + CTA demo; hero a dos columnas
+  (texto + **mockup del producto**: marco de ventana con barra de navegador y
+  el panel de cifras vivo dentro); 3 cards de principios con icono; dos
+  feature blocks alternados (imagen + texto, .split/.split-rev); features grid
+  de 6 + "Y además…" de 6 (patrón why_choose + more_features de Alice);
+  banda de contadores honestos (7 ficheros / 0 dependencias / 0 servidores /
+  100% AGPL); slider de capturas; comparativa por bloques con lado honesto;
+  pricing de UNA tarjeta gratis (honesto, sin planes inventados);
+  instalación con comando + requisitos; FAQ acordeón; footer.
 - **Estado de componentes:** botones con hover/focus visible; slider con
   flechas + miniaturas clicables y `aria-label`; toggle tema e idioma.
 - **Motion:** reveal sutil al scroll (IntersectionObserver), contadores,
@@ -64,21 +71,28 @@ tema claro/oscuro. Vive en `landing/` dentro del repo `gnacho/goatdash`.
   `prefers-reduced-motion` (todo congelado). Sin bounce.
 - **Iconografía:** lucide inline (stroke 1.75), coherente con la casa.
 - **Imágenes:** capturas REALES del dashboard goatdash (16 WebP: 4 vistas
-  × es/en × light/dark), servidas por slider con idioma+tema.
+  × es/en × light/dark), servidas por slider con idioma+tema; los blocks
+  alternados usan las mismas capturas vía `img[data-shot]` y cambian también.
 - **Dark mode:** noche azulada diseñada (no invertida), tokens semánticos.
 - **Accesibilidad:** contraste AA en ambos temas, un solo `<h1>`, `aria-label`
   en controles, teclado operable, `prefers-reduced-motion`.
+- **Contadores honestos:** la banda de stats usa datos reales del producto
+  (7 ficheros, 0 dependencias, 0 servidores intermedios, 100% AGPL), no
+  cifras de usuarios inventadas como en el template original.
 
 ## Fase 3 · Slop-audit
 
 - Sin Inter/Roboto/Arial como fuente principal (Space Grotesk + JetBrains Mono).
 - Sin degradados índigo/violeta, sin gradientes en titulares.
-- Sin "hero + 3 cards + testimonios" genérico: la estructura es hero con panel
-  vivo, por qué existe, pilares, funcionalidades, capturas, comparativa
-  honesta, instalación, acerca de.
+- Estructura inspirada en Alice pero SIN rellenar con lorem ipsum: no hay
+  testimonios, equipo, partners, formulario de contacto ni pricing de pago
+  (serían fabricados). El pricing es una tarjeta única de 0 €.
 - Sin glassmorphism, sin blobs decorativos, sin stock.
-- Firma única: panel de cifras vivo con gráfica que se dibuja.
+- Firma única: mockup del producto con panel de cifras vivo y gráfica que se
+  dibuja.
 
 ## Cambios
 
+- 17-Ago-2026: rediseño al patrón de app-landing (Alice): mockup del hero,
+  blocks alternados, contadores, pricing gratuito, nav con Precio/FAQ.
 - 16-Ago-2026: creación.

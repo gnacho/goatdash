@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>goatdash · dashboard de GoatCounter, ligero y privado</title>
   <meta name="description" content="Un dashboard ligero y privado para tu analítica de GoatCounter. Sin cookies, sin nube, sin framework: ficheros estáticos que leen tu instancia." />
-  <meta name="theme-color" content="#faf7f2" />
+  <meta name="theme-color" content="#fafbfd" />
   <link rel="canonical" href="https://goatdash.cloudless.club/" />
   <link rel="alternate" hreflang="es" href="https://goatdash.cloudless.club/" />
   <link rel="alternate" hreflang="en" href="https://goatdash.cloudless.club/?hl=en" />
@@ -27,8 +27,8 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b5884'/%3E%3Cpath d='M11 21V9h2v10h3V7h2v12h3V9h2v12z' fill='white' transform='translate(-1 1)'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link href="https://fonts.googleapis.com/css2?family=Exo:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -61,8 +61,8 @@
       <a href="#features" data-i18n="nav.features">Funciones</a>
       <a href="#shots" data-i18n="nav.shots">Capturas</a>
       <a href="#compare" data-i18n="nav.compare">Comparativa</a>
-      <a href="#install" data-i18n="nav.install">Instalar</a>
-      <a href="#about" data-i18n="nav.about">Acerca de</a>
+      <a href="#pricing" data-i18n="nav.pricing">Precio</a>
+      <a href="#faq" data-i18n="nav.faq">FAQ</a>
     </div>
     <div class="nav-actions">
       <select id="langSelect" aria-label="Language"><option value="es">ES</option><option value="en">EN</option></select>
@@ -80,9 +80,14 @@
         <h1 class="font-display"><span data-i18n="hero.t1">GoatCounter, el motor.</span><br /><span class="text-accent" data-i18n="hero.t2">goatdash, la vista.</span></h1>
         <p class="hero-sub" data-i18n="hero.sub">Un visor ligero y privado para tu analítica de GoatCounter. Sin cookies, sin nube, sin framework: unos ficheros estáticos que leen tu instancia directamente y la pintan con claridad.</p>
         <div class="hero-actions">
-          <a class="btn-primary" href="https://stats.cloudless.club" target="_blank" rel="noopener" data-i18n="hero.cta1">Probar demo</a>
-          <a class="btn-ghost" href="https://github.com/gnacho/goatdash" target="_blank" rel="noopener" data-i18n="hero.cta2">Ver el código</a>
-          <a class="btn-link" href="#install" data-i18n="hero.cta3">Instalar</a>
+          <a class="btn-primary app-btn" href="https://stats.cloudless.club" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3l14 9-14 9V3z"/></svg>
+            <span data-i18n="hero.cta1">Probar demo</span>
+          </a>
+          <a class="btn-ghost app-btn" href="https://github.com/gnacho/goatdash" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            <span data-i18n="hero.cta2">Ver el código</span>
+          </a>
         </div>
         <div class="hero-facts">
           <span class="chip"><span class="chip-dot"></span>AGPL-3.0</span>
@@ -92,64 +97,92 @@
         </div>
       </div>
 
-      <div class="live-panel" id="livePanel" aria-label="Panel de cifras en vivo">
-        <div class="live-head">
-          <span class="live-title mono" data-i18n="live.pill">Datos de demo · 30 días</span>
-          <span class="live-dot" aria-hidden="true"></span>
-        </div>
-        <div class="live-kpis">
-          <div class="live-kpi">
-            <span class="live-label" data-i18n="live.visitors">Visitantes únicos</span>
-            <span class="live-num font-display" id="liveVisitors" data-count="14873">0</span>
-            <span class="live-sub mono" id="liveVisitorsTrend">+32% <span data-i18n="live.trend">vs periodo anterior</span></span>
+      <div class="hero-mock live">
+        <div class="mock-frame">
+          <div class="mock-bar">
+            <span class="mock-dot" aria-hidden="true"></span>
+            <span class="mock-dot" aria-hidden="true"></span>
+            <span class="mock-dot" aria-hidden="true"></span>
+            <span class="mock-url mono">stats.cloudless.club</span>
           </div>
-          <div class="live-kpi">
-            <span class="live-label" data-i18n="live.pageviews">Páginas vistas</span>
-            <span class="live-num font-display" id="livePageviews" data-count="18591">0</span>
-            <span class="live-sub mono" data-i18n="live.events">Eventos: 412</span>
-          </div>
-          <div class="live-kpi">
-            <span class="live-label" data-i18n="live.topref">Principal referencia</span>
-            <span class="live-num font-display live-sm" id="liveTopref">news.ycombinator.com</span>
-            <span class="live-sub mono">231</span>
+          <div class="live-panel" id="livePanel" aria-label="Panel de cifras en vivo">
+            <div class="live-head">
+              <span class="live-title mono" data-i18n="live.pill">Datos de demo · 30 días</span>
+              <span class="live-dot" aria-hidden="true"></span>
+            </div>
+            <div class="live-kpis">
+              <div class="live-kpi">
+                <span class="live-label" data-i18n="live.visitors">Visitantes únicos</span>
+                <span class="live-num font-display" id="liveVisitors" data-count="14873">0</span>
+                <span class="live-sub mono" id="liveVisitorsTrend">+32% <span data-i18n="live.trend">vs periodo anterior</span></span>
+              </div>
+              <div class="live-kpi">
+                <span class="live-label" data-i18n="live.pageviews">Páginas vistas</span>
+                <span class="live-num font-display" id="livePageviews" data-count="18591">0</span>
+                <span class="live-sub mono" data-i18n="live.events">Eventos: 412</span>
+              </div>
+              <div class="live-kpi">
+                <span class="live-label" data-i18n="live.topref">Principal referencia</span>
+                <span class="live-num font-display live-sm" id="liveTopref">news.ycombinator.com</span>
+                <span class="live-sub mono">231</span>
+              </div>
+            </div>
+            <div class="live-chart" aria-hidden="true">
+              <svg id="liveBars" viewBox="0 0 300 72" preserveAspectRatio="none"></svg>
+            </div>
+            <div class="live-foot mono" id="liveFoot"></div>
           </div>
         </div>
-        <div class="live-chart" aria-hidden="true">
-          <svg id="liveBars" viewBox="0 0 300 72" preserveAspectRatio="none"></svg>
-        </div>
-        <div class="live-foot mono" id="liveFoot"></div>
       </div>
     </div></header>
 
-    <section class="block" id="why"><div class="container">
-      <span class="eyebrow" data-i18n="why.eyebrow">Por qué existe</span>
-      <h2 class="font-display" data-i18n="why.title">GoatCounter es genial. Esta es su capa de consulta.</h2>
-      <p class="lead" data-i18n="why.p1">GoatCounter es un proyecto excelente: un solo binario, SQLite, sin tracking de datos personales y una API v0 que lo expone todo. Esta web no existe para sustituirlo ni para discutirle el stack.</p>
-      <p class="lead" data-i18n="why.p2">Pero la interfaz oficial está pensada para administrar el sitio, no solo para consultarlo. Para quien quiere ver los números cada mañana, para un perfil de marketing o para alguien que prefiere una vista clara, hace falta otra cosa. goatdash es eso: una interfaz de consulta, inofensiva, ligera y complementaria.</p>
-      <p class="lead" data-i18n="why.p3">goatdash usa la API v0 de tu propia instancia, respeta sus decisiones técnicas y no toca una línea del motor. De hecho, si usas un solo sitio, basta un GoatCounter sin parchear; si usas varios, cada uno en su dominio y la vista se encarga del resto.</p>
-      <a class="btn-ghost" href="https://stats.cloudless.club" target="_blank" rel="noopener" data-i18n="why.demo">Abrir la demo</a>
-    </div></section>
-
-    <section class="block block-alt" id="principles"><div class="container">
+    <section class="block" id="principles"><div class="container">
       <span class="eyebrow" data-i18n="principles.eyebrow">Tres principios</span>
       <h2 class="font-display" data-i18n="principles.title">Decisiones reales, no eslóganes.</h2>
       <div class="cards">
         <div class="card reveal">
-          <h3 class="card-title"><span class="card-idx mono">01</span><span data-i18n="principles.p1.title">GoatCounter por debajo</span></h3>
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16"/></svg></div>
+          <h3 class="card-title"><span data-i18n="principles.p1.title">GoatCounter por debajo</span></h3>
           <p class="card-text" data-i18n="principles.p1.text">La API v0 y el header Host del binario oficial hacen todo el trabajo. No hay fork, no hay parche obligatorio, no hay segundo motor que mantener.</p>
         </div>
         <div class="card reveal" style="--d:80ms">
-          <h3 class="card-title"><span class="card-idx mono">02</span><span data-i18n="principles.p2.title">La vista, en tu navegador</span></h3>
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+          <h3 class="card-title"><span data-i18n="principles.p2.title">La vista, en tu navegador</span></h3>
           <p class="card-text" data-i18n="principles.p2.text">Vanilla JS, sin framework, sin CDN, sin build y sin backend propio. Son siete ficheros estáticos: desplegar es copiar.</p>
         </div>
         <div class="card reveal" style="--d:160ms">
-          <h3 class="card-title"><span class="card-idx mono">03</span><span data-i18n="principles.p3.title">Tus datos, en tu casa</span></h3>
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <h3 class="card-title"><span data-i18n="principles.p3.title">Tus datos, en tu casa</span></h3>
           <p class="card-text" data-i18n="principles.p3.text">La API key vive en tu localStorage y solo viaja a tu instancia por HTTPS. Ningún servidor intermedio ve tus visitas.</p>
         </div>
       </div>
     </div></section>
 
-    <section class="block" id="features"><div class="container">
+    <section class="block block-alt"><div class="container split split-rev">
+      <div class="split-media reveal-left">
+        <img data-shot="cover" src="assets/shot-cover-es-light.webp" alt="" data-i18n-alt="shots.cover" loading="lazy" />
+      </div>
+      <div class="split-copy reveal-right" style="--d:80ms">
+        <span class="eyebrow" data-i18n="block1.eyebrow">Por qué existe</span>
+        <h2 class="font-display" data-i18n="block1.title">GoatCounter es genial. Esta es su capa de consulta.</h2>
+        <p class="lead" data-i18n="block1.text">GoatCounter es un proyecto excelente: un solo binario, SQLite, sin tracking de datos personales y una API v0 que lo expone todo. Su interfaz oficial está pensada para administrar el sitio; goatdash es la otra cara: una interfaz de consulta, inofensiva, ligera y complementaria, que no toca una línea del motor.</p>
+        <a class="btn-primary" href="https://stats.cloudless.club" target="_blank" rel="noopener" data-i18n="block1.cta">Abrir la demo</a>
+      </div>
+    </div></section>
+
+    <section class="block"><div class="container split">
+      <div class="split-copy reveal-left">
+        <span class="eyebrow" data-i18n="block2.eyebrow">Multi-sitio de serie</span>
+        <h2 class="font-display" data-i18n="block2.title">Todos tus sitios, en un solo panel.</h2>
+        <p class="lead" data-i18n="block2.text">La barra lateral lista la cuenta y sus subsitios desde /api/v0/sites. Cada sitio se consulta en su propio dominio con el binario oficial y, mientras lees, goatdash calienta en segundo plano la caché de los demás: cambiar de uno a otro es casi inmediato.</p>
+        <a class="btn-ghost" href="https://github.com/gnacho/goatdash" target="_blank" rel="noopener" data-i18n="block2.cta">Ver el código</a>
+      </div>
+      <div class="split-media reveal-right" style="--d:80ms">
+        <img data-shot="donuts" src="assets/shot-donuts-es-light.webp" alt="" data-i18n-alt="shots.donuts" loading="lazy" />
+      </div>
+    </div></section>
+
+    <section class="block block-alt" id="features"><div class="container">
       <span class="eyebrow" data-i18n="features.eyebrow">Funciones</span>
       <h2 class="font-display" data-i18n="features.title">Todo lo que tu GoatCounter ya sabe, bien contado.</h2>
       <p class="lead" data-i18n="features.lead">Cada función está contrastada contra el código del repositorio.</p>
@@ -171,6 +204,17 @@
           <div><h3 class="feat-title" data-i18n="feat.4.title">Referrers por canal</h3><p class="feat-text" data-i18n="feat.4.text">Directo, buscadores, campañas y otros sitios, con drill desde cada referrer hasta las páginas que trajo.</p></div>
         </div>
         <div class="feat">
+          <div class="feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 3v9h9"/></svg></div>
+          <div><h3 class="feat-title" data-i18n="feat.9.title">Recargas instantáneas</h3><p class="feat-text" data-i18n="feat.9.text">Un service worker diminuto sirve el shell desde el navegador y la API se cachea con stale-while-revalidate. Recargar pinta en milisegundos.</p></div>
+        </div>
+        <div class="feat">
+          <div class="feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div><h3 class="feat-title" data-i18n="feat.12.title">Respeto a la API</h3><p class="feat-text" data-i18n="feat.12.text">Caché de respuesta, cliente que lee X-Rate-Limit-Remaining y Retry-After, reintento por tarjeta e indicador de frescura.</p></div>
+        </div>
+      </div>
+      <h3 class="more-title font-display" data-i18n="features.more">Y además…</h3>
+      <div class="feats feats-more reveal">
+        <div class="feat">
           <div class="feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></div>
           <div><h3 class="feat-title" data-i18n="feat.5.title">Drill en cada tarjeta</h3><p class="feat-text" data-i18n="feat.5.text">De páginas a referrers, de navegadores a versiones, de países a regiones, de campañas a sus URLs.</p></div>
         </div>
@@ -187,10 +231,6 @@
           <div><h3 class="feat-title" data-i18n="feat.8.title">Tema tri-estado</h3><p class="feat-text" data-i18n="feat.8.text">Oscuro, claro o auto, aplicado antes de pintar por un theme.js externo compatible con un CSP estricto.</p></div>
         </div>
         <div class="feat">
-          <div class="feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 3v9h9"/></svg></div>
-          <div><h3 class="feat-title" data-i18n="feat.9.title">Recargas instantáneas</h3><p class="feat-text" data-i18n="feat.9.text">Un service worker diminuto sirve el shell desde el navegador y la API se cachea con stale-while-revalidate. Recargar pinta en milisegundos.</p></div>
-        </div>
-        <div class="feat">
           <div class="feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg></div>
           <div><h3 class="feat-title" data-i18n="feat.10.title">Español e inglés</h3><p class="feat-text" data-i18n="feat.10.text">UI en ES/EN/Auto, persistida en localStorage. Cambiar de idioma no pierde tu conexión.</p></div>
         </div>
@@ -198,9 +238,26 @@
           <div class="feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
           <div><h3 class="feat-title" data-i18n="feat.11.title">Modo demo</h3><p class="feat-text" data-i18n="feat.11.text">Un clic carga el dashboard completo con datos de ejemplo realistas. Sin API key, ideal para probar antes de conectar.</p></div>
         </div>
-        <div class="feat">
-          <div class="feat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-          <div><h3 class="feat-title" data-i18n="feat.12.title">Respeto a la API</h3><p class="feat-text" data-i18n="feat.12.text">Caché de respuesta, cliente que lee X-Rate-Limit-Remaining y Retry-After, reintento por tarjeta e indicador de frescura.</p></div>
+      </div>
+    </div></section>
+
+    <section class="stats"><div class="container">
+      <div class="stats-grid">
+        <div class="stat reveal">
+          <span class="stat-num font-display" id="statFiles" data-count="7">0</span>
+          <span class="stat-label" data-i18n="stats.l1">Ficheros estáticos</span>
+        </div>
+        <div class="stat reveal" style="--d:80ms">
+          <span class="stat-num font-display" id="statDeps" data-count="0">0</span>
+          <span class="stat-label" data-i18n="stats.l2">Dependencias</span>
+        </div>
+        <div class="stat reveal" style="--d:160ms">
+          <span class="stat-num font-display" id="statMid" data-count="0">0</span>
+          <span class="stat-label" data-i18n="stats.l3">Servidores en medio</span>
+        </div>
+        <div class="stat reveal" style="--d:240ms">
+          <span class="stat-num font-display" id="statFree" data-count="100">0<span class="stat-suffix">%</span></span>
+          <span class="stat-label" data-i18n="stats.l4">Libre, AGPL-3.0</span>
         </div>
       </div>
     </div></section>
@@ -260,7 +317,27 @@
       </div>
     </div></section>
 
-    <section class="block block-alt" id="install"><div class="container">
+    <section class="block block-alt" id="pricing"><div class="container">
+      <span class="eyebrow" data-i18n="pricing.eyebrow">Precio</span>
+      <h2 class="font-display" data-i18n="pricing.title">Gratis. Para siempre.</h2>
+      <p class="lead pricing-lead" data-i18n="pricing.sub">Sin licencias, sin suscripciones, sin cuentas. Código abierto, AGPL-3.0 y gratuito siempre.</p>
+      <div class="pricing-card reveal">
+        <div class="price-value">
+          <span class="price-amount font-display" data-i18n="pricing.price">0 €</span>
+          <span class="price-duration mono" data-i18n="pricing.per">una vez, para siempre</span>
+        </div>
+        <ul class="pricing-content">
+          <li data-i18n="pricing.item1">Todo el dashboard</li>
+          <li data-i18n="pricing.item2">Multi-sitio sin límites</li>
+          <li data-i18n="pricing.item3">Sin cuentas ni seguimiento</li>
+          <li data-i18n="pricing.item4">Código fuente AGPL-3.0</li>
+        </ul>
+        <a class="btn-primary" href="https://ko-fi.com/gnacho" target="_blank" rel="noopener" data-i18n="pricing.cta">Apoyar en Ko-fi</a>
+        <p class="pricing-note mono" data-i18n="pricing.note">¿Te sobra? Dona si quieres. No es obligatorio.</p>
+      </div>
+    </div></section>
+
+    <section class="block" id="download"><div class="container">
       <span class="eyebrow" data-i18n="install.eyebrow">Instalación</span>
       <h2 class="font-display" data-i18n="install.title">Instalación fácil y rápida.</h2>
       <p class="lead" data-i18n="install.text">No hay script de instalación ni nada que compilar. goatdash son unos pocos ficheros estáticos: ponlos en cualquier host y abre la página.</p>
@@ -274,17 +351,6 @@
         <div class="req reveal"><span class="req-num mono">3</span><p data-i18n="install.req3">Sin Docker, sin Node, sin herramientas de build</p></div>
       </div>
       <p class="hint mono" data-i18n="install.hint">Para el multi-sitio, cada sitio necesita su propio dominio apuntando al mismo GoatCounter; el binario oficial resuelve el sitio por el header Host.</p>
-    </div></section>
-
-    <section class="block" id="about"><div class="container">
-      <span class="eyebrow" data-i18n="about.eyebrow">Acerca de</span>
-      <h2 class="font-display" data-i18n="about.title">Un proyecto personal.</h2>
-      <p class="lead" data-i18n="about.p1">goatdash nació de usar GoatCounter a diario y de querer una vista a juego con el resto de mis proyectos: ligera, autohospedada y en el mismo estilo. Empezó como un rewrite del dashboard de Abhishekh Singh, que cargaba React y Recharts desde un CDN; para una página que solo lee una API JSON, ese peso sobraba.</p>
-      <p class="lead" data-i18n="about.p2">Crece con la misma regla que el resto de mi trabajo: cada versión corre primero en mi propia infraestructura, midiendo el hub completo desde agosto de 2026. Si algo no se usa, se quita.</p>
-      <p class="lead" data-i18n="about.expect">Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada. Es un proyecto personal, AGPL-3.0 y gratuito siempre.</p>
-      <div class="about-actions">
-        <a class="btn-primary" href="https://ko-fi.com/gnacho" target="_blank" rel="noopener" data-i18n="about.support">Apoyar el proyecto</a>
-      </div>
     </div></section>
 
     <section class="block block-alt" id="faq"><div class="container">
@@ -334,8 +400,8 @@
     </div>
   </div>
 
-  <script src="i18n.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="i18n.js?v=8"></script>
+  <script src="app.js?v=8"></script>
   <script data-goatcounter="https://stats.goatdash.cloudless.club/count" async src="//stats.goatdash.cloudless.club/count.js"></script>
 </body>
 </html>
