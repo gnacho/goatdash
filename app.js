@@ -245,7 +245,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.66.0";
+	const VERSION = "0.68.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -1930,7 +1930,7 @@
 		const apiId = item.apiId || item.id || item.name;
 		const demoDetails = demoMode ? GOATDASH_DEMO[page === "browsers" ? "browserDetails" : page === "systems" ? "systemDetails" : page === "sizes" ? "sizeDetails" : null] : null;
 		if (demoMode) {
-			const rows = demoDetails ? demoDetails[item.name] : null;
+			const rows = demoDetails ? demoDetails[item.apiId || item.name] : null;
 			container.innerHTML = "";
 			const d = document.createElement("div");
 			d.className = "detail-panel detail-donut";
@@ -2176,7 +2176,7 @@
 	function renderDonutsDemo(data) {
 		renderDonut($("#browsers-body"), data.browsers.stats, { total: data.browsers.total, page: "browsers", onDrill: (item) => drillDetail("browsers", item, 0) });
 		renderDonut($("#systems-body"), data.systems.stats, { total: data.systems.total, page: "systems", onDrill: (item) => drillDetail("systems", item, 0) });
-		renderDonut($("#sizes-body"), data.sizes.stats.map((i) => ({ ...i, name: deviceLabel(i.id || i.name) })), { total: data.sizes.total, page: "sizes", onDrill: (item) => drillDetail("sizes", item, 0) });
+		renderDonut($("#sizes-body"), data.sizes.stats.map((i) => ({ ...i, name: deviceLabel(i.id || i.name), apiId: i.id || i.name })), { total: data.sizes.total, page: "sizes", onDrill: (item) => drillDetail("sizes", item, 0) });
 	}
 
 	function renderGeoDemo(data) {
