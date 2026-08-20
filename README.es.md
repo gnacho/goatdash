@@ -54,7 +54,7 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 - **Tema tri-estado con anti-FOUC**: oscuro, claro o auto, conmutado en la topbar (botones con texto, solo iconos en móvil) y aplicado antes de pintar por un `theme.js` externo que funciona con un CSP estricto `default-src 'self'`.
 - **Recargas instantáneas**: un service worker diminuto sirve el shell de la app desde el navegador (HTML network-first para que siempre te llegue la versión desplegada, assets versionados cache-first), y las respuestas de la API se cachean por rango con stale-while-revalidate, así que una recarga pinta en milisegundos incluso con una conexión lenta.
 - **Idioma**: UI en ES/EN/Auto, persistida en localStorage.
-- **Menú Ajustes con Acerca de**: el menú de engranaje abre Acerca de, que muestra la versión (0.74.0) y un enlace al código fuente.
+- **Menú Ajustes con Acerca de**: el menú de engranaje abre Acerca de, que muestra la versión (0.76.0) y un enlace al código fuente.
 - **Usuario conectado en la topbar**: un chip con tu avatar y tu email desde `/api/v0/me`.
 - **Modo demo**: un clic carga el dashboard completo con datos de ejemplo realistas, sin necesidad de API key.
 - **Respeto a la API**: caché de respuesta de 60 segundos, un cliente concurrente pequeño que lee `X-Rate-Limit-Remaining` y `Retry-After` y se adapta para no superar nunca el límite del servidor, reintento por tarjeta e indicador de "actualizado hace Xs".

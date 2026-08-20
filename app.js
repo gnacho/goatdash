@@ -253,7 +253,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.74.0";
+	const VERSION = "0.76.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -843,9 +843,33 @@
 				map.set(key, (map.get(key) || 0) + (s.daily || 0));
 			});
 		});
-		return [...map.entries()]
+			return [...map.entries()]
 			.sort((a, b) => a[0].localeCompare(b[0]))
 			.map(([ts, count]) => ({ ts, count }));
+	}
+
+	function xLabelLocale() {
+		return currentLang() === "es" ? "es-ES" : "en-US";
+	}
+
+	function formatXTick(ts, group, opts = {}) {
+		let o;
+		if (group === "hour") o = { hour: "numeric", minute: "2-digit" };
+		else if (group === "month") o = opts.withYear ? { month: "short", year: "numeric" } : { month: "short" };
+		else o = { day: "numeric", month: "short" };
+		o.timeZone = "UTC";
+		try { return new Intl.DateTimeFormat(xLabelLocale(), o).format(new Date(ts)); }
+		catch { return ts.slice(0, 10); }
+	}
+
+	function formatTooltipDate(ts, group) {
+		let o;
+		if (group === "hour") o = { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" };
+		else if (group === "month") o = { month: "long", year: "numeric" };
+		else o = { weekday: "short", day: "numeric", month: "short", year: "numeric" };
+		o.timeZone = "UTC";
+		try { return new Intl.DateTimeFormat(xLabelLocale(), o).format(new Date(ts)); }
+		catch { return ts.slice(0, 10); }
 	}
 
 	// ----------------------------------------------------------- skeleton/err
@@ -996,6 +1020,25 @@
 			svg.appendChild(txt);
 		}
 
+		const maxXTicks = 8;
+		const kTicks = Math.min(maxXTicks, n);
+		const spansYears = group === "month" && new Set(series.map((s) => s.ts.slice(0, 4))).size > 1;
+		const xTickIdx = new Set();
+		if (kTicks === 1) xTickIdx.add(0);
+		else for (let j = 0; j < kTicks; j++) xTickIdx.add(Math.round((j * (n - 1)) / (kTicks - 1)));
+		[...xTickIdx].sort((a, b) => a - b).forEach((i) => {
+			const isLast = i === n - 1 && n > 1;
+			const txt = document.createElementNS(ns, "text");
+			txt.setAttribute("x", x(i));
+			txt.setAttribute("y", H - 8);
+			txt.setAttribute("text-anchor", isLast ? "end" : "middle");
+			txt.setAttribute("font-size", "11");
+			txt.setAttribute("fill", "var(--text-muted)");
+			txt.setAttribute("class", "x-tick");
+			txt.textContent = formatXTick(series[i].ts, group, { withYear: spansYears });
+			svg.appendChild(txt);
+		});
+
 		// area
 		const pts = series.map((s, i) => [x(i), y(s.count)]);
 		const areaPath = "M" + pts[0][0] + "," + (PAD.top + ih) + " L" + pts.map((p) => p[0] + "," + p[1]).join(" L") + " L" + pts[pts.length - 1][0] + "," + (PAD.top + ih) + " Z";
@@ -1033,7 +1076,7 @@
 			dot.setAttribute("fill", "var(--chart-line)");
 			svg.appendChild(dot);
 			setTimeout(() => dot.remove(), 50);
-			const tip = showTooltip(e.target, `<span class="tt-num">${fmtNum(s.count)}</span> ${t("chart.tooltip")}`);
+			const tip = showTooltip(e.target, `<div class="tt-date">${formatTooltipDate(s.ts, group)}</div><span class="tt-num">${fmtNum(s.count)}</span> ${t("chart.tooltip")}`);
 			tip.style.left = (e.clientX + 12) + "px";
 			tip.style.top = (e.clientY - 30) + "px";
 		});
