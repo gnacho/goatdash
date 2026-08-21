@@ -1179,7 +1179,8 @@
 
 	function renderDonut(container, items, { total, page, onDrill }) {
 		container.innerHTML = "";
-		if (!items || !items.length) { container.appendChild(emptyEl(t("no.data"))); return; }
+		const totalCount = total || (items || []).reduce((a, i) => a + (i.count || 0), 0);
+		if (!items || !items.length || totalCount <= 0) { container.appendChild(emptyEl(t("no.data"))); return; }
 		donutState[page] = { items, total };
 		const palette = [
 			["#7eb2e0", "#2b5884"], ["#3fb950", "#1a7f37"], ["#e3b341", "#9e7b1c"],
@@ -1194,7 +1195,6 @@
 		} else {
 			display = items.map((i) => ({ ...i }));
 		}
-		const totalCount = total || display.reduce((a, i) => a + i.count, 0);
 
 		const wrap = document.createElement("div");
 		wrap.className = "donut-wrap";
