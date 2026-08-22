@@ -253,13 +253,20 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.78.0";
+	const VERSION = "0.82.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
 	const LANG_KEY = "gc-dashboard-lang-v1";
 	const CACHE_PREFIX = "gc-cache:";
 	const CACHE_TTL_MS = 60_000;
+	// Las claves de caché más viejas que este umbral se purgan al arrancar (y
+	// periódicamente). La caché es stale-while-revalidate (TTL 60 s) y algunos
+	// flujos (drill de donas, rangos custom) cachean por URL con timestamps que
+	// cambian al minuto: sin poda el origin llena su cuota de 5 MiB y cualquier
+	// setItem lanza QuotaExceededError. 10 min conserva el stale útil y deja la
+	// cuota bajo control.
+	const CACHE_PRUNE_MS = 10 * 60_000;
 	// Límite del backend (configurado en el servidor): 40 req/s + 5000/h.
 	// Semáforo de concurrencia + espaciado de arranque ADAPTATIVO a
 	// X-Rate-Limit-Remaining: cuando el cubo está lleno se va rápido (bases
@@ -350,7 +357,7 @@
 	function applyTheme() {
 		const resolved = theme === "auto" ? resolveTheme() : theme;
 		document.documentElement.setAttribute("data-theme", resolved);
-		localStorage.setItem(THEME_KEY, theme);
+		safeStore(THEME_KEY, theme);
 		updateThemeUI();
 	}
 
@@ -381,7 +388,7 @@
 	function applyLang() {
 		const resolved = currentLang();
 		document.documentElement.lang = resolved;
-		localStorage.setItem(LANG_KEY, lang);
+		safeStore(LANG_KEY, lang);
 		document.title = t("app.title");
 		document.querySelectorAll("[data-i18n]").forEach((el) => {
 			el.textContent = t(el.dataset.i18n);
@@ -461,6 +468,42 @@
 		closeSubmenus();
 		menu.hidden = !willOpen;
 		btn.setAttribute("aria-expanded", String(willOpen));
+	}
+
+	// Escribe en localStorage sin romper el flujo si la cuota está llena o el
+	// modo privado bloquea el storage: un fallo de persistencia no debe matar
+	// una acción (p. ej. cambiar de sitio) que funciona igual en memoria.
+	function safeStore(key, value) {
+		try { localStorage.setItem(key, value); }
+		catch {
+			// Quota llena: libera caché vieja y reintenta una vez antes de rendirse.
+			try {
+				pruneCache();
+				localStorage.setItem(key, value);
+			} catch { /* private mode / quota: non-fatal */ }
+		}
+	}
+
+	// Purga las claves de caché local más viejas que CACHE_PRUNE_MS (y las que
+	// no se puedan leer). Evita que el origin llene la cuota de localStorage:
+	// las escrituras de caché ya son tolerantes, pero las de config no deben
+	// empezar a fallar por culpa de basura acumulada.
+	function pruneCache() {
+		try {
+			const cutoff = Date.now() - CACHE_PRUNE_MS;
+			const doomed = [];
+			for (let i = 0; i < localStorage.length; i++) {
+				const k = localStorage.key(i);
+				if (!k || !k.startsWith(CACHE_PREFIX)) continue;
+				try {
+					const raw = localStorage.getItem(k);
+					if (!raw) { doomed.push(k); continue; }
+					const { timestamp } = JSON.parse(raw);
+					if (typeof timestamp !== "number" || timestamp < cutoff) doomed.push(k);
+				} catch { doomed.push(k); }
+			}
+			doomed.forEach((k) => localStorage.removeItem(k));
+		} catch { /* private mode / quota: best-effort */ }
 	}
 
 	// ------------------------------------------------------------- API client
@@ -1813,7 +1856,7 @@
 			const before = JSON.stringify((config.me && config.me.token && config.me.token.sites) || null);
 			const after = JSON.stringify(me.token.sites || null);
 			config.me = me;
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+			safeStore(STORAGE_KEY, JSON.stringify(config));
 			if (before !== after) {
 				deriveTokenScope();
 				loadSiteSelector();
@@ -1879,7 +1922,7 @@
 		if (client) client.siteBaseURL = currentSite ? "https://" + currentSite : null;
 		if (config) {
 			config.site = currentSite;
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+			safeStore(STORAGE_KEY, JSON.stringify(config));
 		}
 		// El filtro de rutas es específico del sitio: se limpia al cambiar.
 		if (pathFilter) {
@@ -2533,7 +2576,7 @@
 				c.siteBaseURL = currentSite ? "https://" + currentSite : null;
 				c.onRateLimited = (e) => showRateBanner(e.retryAfter);
 				client = c;
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+				safeStore(STORAGE_KEY, JSON.stringify(config));
 				demoMode = false;
 				loadDashboard();
 			} catch (err2) {
@@ -2632,6 +2675,7 @@
 
 	// --------------------------------------------------------------- startup
 	function boot() {
+		pruneCache();
 		applyLang();
 		applyTheme();
 		THEME_MQ.addEventListener("change", () => {
@@ -2643,6 +2687,9 @@
 		initSidebar();
 		initControls();
 		initPathFilter();
+		// Sesiones largas: poda periódica para que la caché no llene la cuota
+		// mientras la pestaña lleva horas abierta.
+		setInterval(pruneCache, CACHE_PRUNE_MS);
 		window.addEventListener("resize", syncTopbarHeight);
 		if (isDemoHost()) {
 			enterDemoMode();
