@@ -2544,6 +2544,18 @@
 		return h === "demo.goatdash.cloudless.club" || h.endsWith(".demo.goatdash.cloudless.club");
 	}
 
+	// Tracker GoatCounter SOLO en la demo pública (issue #36): mismo site que
+	// la landing (stats.goatdash.cloudless.club), path prefijado /demo. En
+	// cualquier otro host no se inyecta nada.
+	function injectDemoTracker() {
+		window.goatcounter = { path: (p) => "/demo" + p };
+		const s = document.createElement("script");
+		s.async = true;
+		s.dataset.goatcounter = "https://stats.goatdash.cloudless.club/count";
+		s.src = "https://stats.goatdash.cloudless.club/count.js";
+		document.head.appendChild(s);
+	}
+
 	function enterDemoMode() {
 		demoMode = true;
 		config = { baseURL: "_demo_", apiKey: "_demo_", me: { site: { cname: "Demo site", code: "demo" } } };
@@ -2692,6 +2704,7 @@
 		setInterval(pruneCache, CACHE_PRUNE_MS);
 		window.addEventListener("resize", syncTopbarHeight);
 		if (isDemoHost()) {
+			injectDemoTracker();
 			enterDemoMode();
 			loadDashboard();
 			return;
