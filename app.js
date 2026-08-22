@@ -1802,6 +1802,25 @@
 		allowedSiteIDs = new Set(ids);
 	}
 
+	// Refresco en segundo plano del /me guardado (issue #32): el scope del token
+	// (token.sites) solo se pedía al conectar, así que una config cacheada
+	// mantenía un scope ampliado en servidor invisible para siempre. Si el
+	// scope cambia, se re-deriva y se recarga el selector de sitios.
+	function refreshTokenScope() {
+		if (!client || !config) return;
+		client.request("/api/v0/me", { retries: 1, forceRefresh: true, site: null }).then((me) => {
+			if (!me || !me.token) return;
+			const before = JSON.stringify((config.me && config.me.token && config.me.token.sites) || null);
+			const after = JSON.stringify(me.token.sites || null);
+			config.me = me;
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+			if (before !== after) {
+				deriveTokenScope();
+				loadSiteSelector();
+			}
+		}).catch(() => { /* sin red o token caducado: se queda el me cacheado */ });
+	}
+
 	async function loadSiteSelector() {
 		if (demoMode || !client) { renderSidebar(); return; }
 		try {
@@ -2643,6 +2662,7 @@
 					client.onRateLimited = (e) => showRateBanner(e.retryAfter);
 					demoMode = false;
 					loadDashboard();
+					refreshTokenScope();
 					return;
 				}
 			}
