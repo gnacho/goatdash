@@ -253,7 +253,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.82.0";
+	const VERSION = "0.84.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -1870,6 +1870,14 @@
 			const data = await client.request("/api/v0/sites", { forceRefresh: true, site: null });
 			sitesList = (data && data.sites) || [];
 			if (allowedSiteIDs) sitesList = sitesList.filter((s) => allowedSiteIDs.has(s.id));
+			// Orden alfabético por el nombre visible (issue #37), aplicado tras el
+			// filtro de scope para que orden y permisos queden separados. La cuenta
+			// (root) se detecta por !parent y sigue pintándose en su propio grupo.
+			sitesList.sort((a, b) =>
+				legibleSiteName(a.cname || a.code || "").toLowerCase()
+					.localeCompare(legibleSiteName(b.cname || b.code || "").toLowerCase()) ||
+				String(a.cname || "").localeCompare(String(b.cname || ""))
+			);
 		} catch {
 			sitesList = [];
 		}
@@ -2544,6 +2552,18 @@
 		return h === "demo.goatdash.cloudless.club" || h.endsWith(".demo.goatdash.cloudless.club");
 	}
 
+	// Tracker GoatCounter SOLO en la demo pública (issue #36): mismo site que
+	// la landing (stats.goatdash.cloudless.club), path prefijado /demo. En
+	// cualquier otro host no se inyecta nada.
+	function injectDemoTracker() {
+		window.goatcounter = { path: (p) => "/demo" + p };
+		const s = document.createElement("script");
+		s.async = true;
+		s.dataset.goatcounter = "https://stats.goatdash.cloudless.club/count";
+		s.src = "https://stats.goatdash.cloudless.club/count.js";
+		document.head.appendChild(s);
+	}
+
 	function enterDemoMode() {
 		demoMode = true;
 		config = { baseURL: "_demo_", apiKey: "_demo_", me: { site: { cname: "Demo site", code: "demo" } } };
@@ -2692,6 +2712,7 @@
 		setInterval(pruneCache, CACHE_PRUNE_MS);
 		window.addEventListener("resize", syncTopbarHeight);
 		if (isDemoHost()) {
+			injectDemoTracker();
 			enterDemoMode();
 			loadDashboard();
 			return;
