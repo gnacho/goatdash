@@ -96,11 +96,23 @@ tar -xzf "$TMPDIR/$ASSET" -C "$EXTRACT_DIR"
 SRC="$EXTRACT_DIR/goatdash"
 [ -d "$SRC" ] || error "Extracted directory $SRC not found"
 
-# --- Atomically swap files (rsync into live dir)
-mkdir -p "$INSTALL_DIR"
-if ! rsync -a --delete "$SRC/" "$INSTALL_DIR/"; then
-  error "Failed to rsync release into $INSTALL_DIR"
+# --- Swap files into the live dir (no rsync dependency).
+# Stage the release as a sibling of the install dir so the final rename is
+# atomic on the same filesystem; keep the previous state recoverable until the
+# swap has fully succeeded.
+STAGE_DIR="${INSTALL_DIR}.new"
+OLD_DIR="${INSTALL_DIR}.old"
+rm -rf "$STAGE_DIR" "$OLD_DIR"
+mkdir -p "$STAGE_DIR"
+cp -a "$SRC/." "$STAGE_DIR/" || error "Failed to stage release files"
+if [ -d "$INSTALL_DIR" ]; then
+  mv "$INSTALL_DIR" "$OLD_DIR" || error "Failed to move current install aside"
 fi
+if ! mv "$STAGE_DIR" "$INSTALL_DIR"; then
+  if [ -d "$OLD_DIR" ]; then mv "$OLD_DIR" "$INSTALL_DIR"; fi
+  error "Failed to move staged release into $INSTALL_DIR"
+fi
+rm -rf "$OLD_DIR"
 
 # --- Permissions: web readable
 chown -R root:root "$INSTALL_DIR"

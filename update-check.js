@@ -101,14 +101,36 @@
 		banner.hidden = false;
 	}
 
-	async function check() {
-		const current = await currentVersion();
-		if (!current) return;
+	function showMessage(text, autoHide) {
+		const banner = document.getElementById("update-banner");
+		const el = document.getElementById("update-banner-text");
+		const link = document.getElementById("update-banner-link");
+		const reloadBtn = document.getElementById("update-banner-reload");
+		const closeBtn = document.getElementById("update-banner-close");
+		if (!banner || !el) return;
+		el.textContent = text;
+		if (link) link.hidden = true;
+		if (reloadBtn) reloadBtn.hidden = true;
+		if (closeBtn) closeBtn.hidden = false;
+		banner.hidden = false;
+		if (autoHide) {
+			clearTimeout(showMessage._timer);
+			showMessage._timer = setTimeout(() => { banner.hidden = true; }, 6000);
+		}
+	}
 
-		let last = 0;
-		try { last = parseInt(localStorage.getItem(CHECK_KEY), 10) || 0; } catch {}
-		const now = Date.now();
-		if (last && now - last < WEEK_MS) return;
+	async function check(opts = {}) {
+		const force = !!opts.force;
+		const onResult = typeof opts.onResult === "function" ? opts.onResult : null;
+		const current = await currentVersion();
+		if (!current) { if (onResult) onResult({ error: "no version" }); return; }
+
+		if (!force) {
+			let last = 0;
+			try { last = parseInt(localStorage.getItem(CHECK_KEY), 10) || 0; } catch {}
+			const now = Date.now();
+			if (last && now - last < WEEK_MS) return;
+		}
 
 		let tag;
 		try {
@@ -116,19 +138,26 @@
 		} catch (e) {
 			// eslint-disable-next-line no-console
 			if (typeof console !== "undefined") console.warn("goatdash update check failed:", e);
+			if (onResult) onResult({ error: e });
 			return;
 		}
 
-		try { localStorage.setItem(CHECK_KEY, String(now)); } catch {}
+		try { localStorage.setItem(CHECK_KEY, String(Date.now())); } catch {}
 
-		let dismissed = null;
-		try { dismissed = localStorage.getItem(DISMISS_KEY); } catch {}
-		if (dismissed === tag) return;
+		const latest = String(tag).replace(/^v/, "");
+		const available = compareSemver(tag, current) > 0;
+		if (onResult) onResult({ current: String(current), latest, available, tag: String(tag) });
 
-		if (compareSemver(tag, current) > 0) {
-			showBanner(tag, false);
+		if (!force) {
+			let dismissed = null;
+			try { dismissed = localStorage.getItem(DISMISS_KEY); } catch {}
+			if (dismissed === tag) return;
 		}
+
+		if (available) showBanner(tag, false);
 	}
+
+	window.GoatdashUpdate = { check, showMessage };
 
 	if ("serviceWorker" in navigator) {
 		navigator.serviceWorker.addEventListener("message", (e) => {
