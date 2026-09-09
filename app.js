@@ -39,6 +39,9 @@
 			"menu.disconnect": "Desconectar",
 			"menu.settings": "Ajustes",
 			"menu.about": "Acerca de",
+			"menu.checkUpdates": "Comprobar actualizaciones",
+			"update.upToDate": "Ya estás al día (v{v}).",
+			"update.err": "No se pudo comprobar la última versión.",
 			"about.version": "Versión {v}",
 			"about.repo": "Ver código fuente",
 			"about.close": "Cerrar",
@@ -159,6 +162,9 @@
 			"menu.disconnect": "Disconnect",
 			"menu.settings": "Settings",
 			"menu.about": "About",
+			"menu.checkUpdates": "Check for updates",
+			"update.upToDate": "You are up to date (v{v}).",
+			"update.err": "Could not check for the latest version.",
 			"about.version": "Version {v}",
 			"about.repo": "View source code",
 			"about.close": "Close",
@@ -253,7 +259,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "0.86.0";
+	const VERSION = "0.88.0";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
@@ -2676,6 +2682,21 @@
 		$("#about-close").addEventListener("click", () => {
 			const dialog = $("#about-dialog");
 			if (dialog && dialog.open) dialog.close();
+		});
+
+		$("#update-btn").addEventListener("click", () => {
+			$("#menu").hidden = true;
+			$("#menu-btn").setAttribute("aria-expanded", "false");
+			const upd = window.GoatdashUpdate;
+			if (!upd || typeof upd.check !== "function") { if (upd && upd.showMessage) upd.showMessage(t("update.err")); return; }
+			upd.check({
+				force: true,
+				onResult: (r) => {
+					if (!r || r.error) { upd.showMessage(t("update.err")); return; }
+					if (r.available) return; // check() already raised the update banner with the release link
+					upd.showMessage(t("update.upToDate", { v: r.current }), true);
+				},
+			});
 		});
 
 		$("#menu-btn").addEventListener("click", (e) => {

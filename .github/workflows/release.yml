@@ -25,7 +25,7 @@ jobs:
           mkdir -p dist
           TMP=$(mktemp -d)
           mkdir "${TMP}/goatdash"
-          cp -r index.html styles.css theme.js app.js fixtures.js sw.js version.json \
+          cp -r index.html styles.css theme.js app.js fixtures.js sw.js update-check.js version.json \
             assets robots.txt LICENSE LICENSE.world-map "${TMP}/goatdash/"
           tar -czf "dist/goatdash-${VERSION}.tar.gz" -C "${TMP}" goatdash
 
