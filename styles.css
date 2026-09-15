@@ -10,6 +10,7 @@
 	--radius: 12px;
 	--radius-sm: 8px;
 	--gap: 16px;
+	--panel-h: 460px;
 
 	--ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -450,18 +451,11 @@ body { min-height: 100vh; }
 	grid-template-columns: repeat(5, 1fr);
 	gap: var(--gap);
 }
-.grid-7-3 {
+.grid-panels {
 	display: grid;
-	grid-template-columns: 7fr 3fr;
-	gap: var(--gap);
-	align-items: start;
-}
-.grid-3 {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: var(--gap);
 }
-.col-stack { display: flex; flex-direction: column; gap: var(--gap); }
 
 /* ---------- Sidebar (sitios) ---------- */
 .hamburger { display: none; }
@@ -583,6 +577,54 @@ body { min-height: 100vh; }
 }
 .card-body { padding: 10px 18px 18px; }
 .chart-wrap .card-body { padding: 14px 18px; }
+
+/* ---------- Panel cards (estilo Plausible: altura fija + pestañas) ---------- */
+.panel-card {
+	height: var(--panel-h);
+	display: flex;
+	flex-direction: column;
+}
+.panel-card .card-head.tabs {
+	padding: 4px 10px 0;
+	border-bottom: 1px solid var(--border);
+	justify-content: flex-start;
+	gap: 2px;
+}
+.tab {
+	appearance: none;
+	background: none;
+	border: none;
+	font: inherit;
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	padding: 9px 12px;
+	cursor: pointer;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+}
+.tab:hover { color: var(--text); }
+.tab.tab-active {
+	color: var(--text);
+	font-weight: 600;
+	border-bottom-color: var(--accent);
+}
+.panel {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	scrollbar-width: thin;
+	scrollbar-color: var(--border) transparent;
+}
+.panel::-webkit-scrollbar { width: 8px; }
+.panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel .card-body { flex: 1; min-height: 0; }
+.panel-toolbar { padding: 12px 18px 0; }
+.panel-toolbar .page-filter { margin-left: 0; }
+/* El mapa llena el panel de altura fija (antes lo hacía syncMapHeight). */
+#geo-map-body { display: flex; flex-direction: column; }
 
 /* ---------- Path filter (páginas) ---------- */
 .page-filter {
@@ -868,17 +910,6 @@ body { min-height: 100vh; }
 .detail-err { color: var(--danger); font-size: 0.8rem; }
 
 /* ---------- World map ---------- */
-.geo-grid {
-	display: grid;
-	grid-template-columns: 2fr 1fr;
-	gap: var(--gap);
-	align-items: stretch;
-}
-.map-col {
-	display: flex;
-	flex-direction: column;
-	min-width: 0;
-}
 .map-wrap {
 	position: relative;
 	overflow: hidden;
@@ -1044,10 +1075,9 @@ body { min-height: 100vh; }
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
 	.grid-kpis { grid-template-columns: repeat(3, 1fr); }
-	.grid-3 { grid-template-columns: repeat(3, 1fr); }
+	.grid-panels { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
-	.geo-grid { grid-template-columns: 1fr; }
 	.hamburger { display: grid; }
 	.sidebar {
 		position: fixed;
@@ -1074,9 +1104,8 @@ body { min-height: 100vh; }
 @media (max-width: 640px) {
 	.theme-switch { display: none; }
 	.theme-toggle-mobile { display: inline-flex; }
+	:root { --panel-h: 420px; }
 	.grid-kpis { grid-template-columns: 1fr; }
-	.grid-7-3 { grid-template-columns: 1fr; }
-	.grid-3 { grid-template-columns: 1fr; }
 	.dashboard { padding: 14px; }
 	.topbar { padding: 10px 14px; }
 	.seg-btn { padding: 5px 9px; }

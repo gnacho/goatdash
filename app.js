@@ -130,6 +130,8 @@
 			"map.zoomOut": "Alejar",
 			"map.reset": "Restablecer mapa",
 			"map.dragHint": "Arrastra para mover · Rueda para zoom",
+			"tab.map": "Mapa",
+			"tab.list": "Lista",
 		},
 		en: {
 			"app.title": "Goatdash",
@@ -253,6 +255,8 @@
 			"map.zoomOut": "Zoom out",
 			"map.reset": "Reset map",
 			"map.dragHint": "Drag to pan · Wheel to zoom",
+			"tab.map": "Map",
+			"tab.list": "List",
 		},
 	};
 
@@ -324,7 +328,6 @@
 	let mapTransformState = null; // { s, tx, ty } del mapa visible
 	let mapDragMoved = false;
 	let mapDragSuppressClick = false;
-	let geoResizeObserver = null;
 	let trafficCache = {};    // preset -> { points, total }
 	let sidebarOpen = false;  // móvil: sheet desplegado
 	let pathFilter = null;    // { names: string[], label: string } o null (todas las rutas)
@@ -1526,29 +1529,53 @@
 		container.appendChild(wrap);
 	}
 
-	function renderGeo(container, stats, total, clientOrDemo) {
-		container.innerHTML = "";
-		const geo = document.createElement("div");
-		geo.className = "geo-grid";
-		const mapCol = document.createElement("div");
-		mapCol.className = "map-col";
-		const listCol = document.createElement("div");
+	// ---------------------------------------------------------- panel tabs
+	// Pestañas de los panel-cards (estilo Plausible). Cableado estático al
+	// arranque: los cards son HTML estático, solo cambia qué panel se ve.
+	function activateTab(tab) {
+		const card = tab.closest(".panel-card");
+		if (!card) return;
+		const name = tab.dataset.tab;
+		card.querySelectorAll(".tab").forEach((tb) => {
+			const on = tb === tab;
+			tb.classList.toggle("tab-active", on);
+			tb.setAttribute("aria-selected", String(on));
+		});
+		card.querySelectorAll(".panel").forEach((p) => { p.hidden = p.dataset.panel !== name; });
+	}
 
-		if (geoResizeObserver) { geoResizeObserver.disconnect(); geoResizeObserver = null; }
-		function syncMapHeight() {
-			const mapWrap = mapCol.querySelector(".map-wrap");
-			if (!mapWrap || !listCol) return;
-			requestAnimationFrame(() => {
-				const sideBySide = window.innerWidth > 900;
-				const natural = mapCol.getBoundingClientRect().width / 2;
-				const listH = listCol.getBoundingClientRect().height;
-				const target = sideBySide ? Math.max(natural, listH) : natural;
-				mapWrap.style.minHeight = target + "px";
+	// Helper programático: activa la pestaña `tabName` del card `cardId`.
+	function activatePanelTab(cardId, tabName) {
+		const card = document.getElementById(cardId);
+		const tab = card && card.querySelector(`.tab[data-tab="${tabName}"]`);
+		if (tab) activateTab(tab);
+	}
+
+	function initCardTabs() {
+		document.querySelectorAll(".panel-card").forEach((card) => {
+			const tabs = [...card.querySelectorAll(".tab")];
+			tabs.forEach((tab) => {
+				tab.addEventListener("click", () => activateTab(tab));
+				tab.addEventListener("keydown", (e) => {
+					if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+					e.preventDefault();
+					// role=tablist: ←/→ recorre las pestañas visibles (la de
+					// campaigns puede estar oculta hasta que lleguen datos).
+					const visible = tabs.filter((tb) => !tb.hidden);
+					const i = visible.indexOf(tab);
+					if (i === -1) return;
+					const step = e.key === "ArrowRight" ? 1 : visible.length - 1;
+					const next = visible[(i + step) % visible.length];
+					next.focus();
+					activateTab(next);
+				});
 			});
-		}
-		function onListHeightChange() { syncMapHeight(); }
-		geoResizeObserver = new ResizeObserver(onListHeightChange);
-		geoResizeObserver.observe(geo);
+		});
+	}
+
+	function renderGeo(mapContainer, listContainer, stats, total, clientOrDemo) {
+		mapContainer.innerHTML = "";
+		listContainer.innerHTML = "";
 
 		function openCountry(name, fromMap) {
 			if (!clientOrDemo && !demoMode) return;
@@ -1556,12 +1583,12 @@
 			if (!item) return;
 			const code = countryNameToCode(name);
 			if (!code) return;
-			const row = listCol.querySelector(`.list-row[data-name="${CSS.escape(name)}"]`);
+			const row = listContainer.querySelector(`.list-row[data-name="${CSS.escape(name)}"]`);
 			const isSame = highlightCode === code;
 
 			// Quitar cualquier resalte/detalle previo de la lista.
-			listCol.querySelectorAll(".list-row.selected").forEach((r) => r.classList.remove("selected"));
-			listCol.querySelectorAll(".list-row.open").forEach((r) => {
+			listContainer.querySelectorAll(".list-row.selected").forEach((r) => r.classList.remove("selected"));
+			listContainer.querySelectorAll(".list-row.open").forEach((r) => {
 				r.querySelector(".detail-panel")?.remove();
 				r.classList.remove("open");
 			});
@@ -1570,43 +1597,41 @@
 				highlightCode = null;
 			} else {
 				highlightCode = code;
-				if (row) {
-					row.classList.add("selected");
-					if (fromMap) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
-				}
+				if (row) row.classList.add("selected");
 			}
 
-			mapCol.innerHTML = "";
-			renderWorldMap(mapCol, stats, total, (clickedCode) => {
+			// El re-render destruye el path bajo el cursor sin disparar
+			// mouseleave, así que el tooltip del mapa quedaría colgado.
+			clearTooltips();
+
+			mapContainer.innerHTML = "";
+			renderWorldMap(mapContainer, stats, total, (clickedCode) => {
 				const clickedItem = (stats || []).find((s) => countryNameToCode(s.name) === clickedCode);
 				if (clickedItem) openCountry(clickedItem.name, true);
 			});
-			syncMapHeight();
+
+			// Click en el mapa: saltar a la pestaña de lista y llevar la fila
+			// a vista. Desde la lista solo se re-renderiza el mapa (arriba),
+			// sin cambiar de pestaña.
+			if (fromMap === true) {
+				activatePanelTab("geo-card", "list");
+				if (row) row.scrollIntoView({ block: "nearest" });
+			}
 		}
 
-		const counts = {};
-		(stats || []).forEach((s) => {
-			const code = countryNameToCode(s.name);
-			if (code) counts[code] = s.count;
-		});
-
-		renderWorldMap(mapCol, stats, total, (code) => {
+		renderWorldMap(mapContainer, stats, total, (code) => {
 			const item = (stats || []).find((s) => countryNameToCode(s.name) === code);
 			if (item) openCountry(item.name, true);
 		});
-		geo.appendChild(mapCol);
 
 		const listItems = (stats || []).map((s) => ({ ...s }));
-		renderTopList(listCol, listItems, {
+		renderTopList(listContainer, listItems, {
 			total,
 			prefix: (i) => flagFor(i.name),
 			page: "locations",
 			onRowClick: (item, row) => openCountry(item.name, false),
 			isSelected: (i) => countryNameToCode(i.name) === highlightCode,
 		});
-		geo.appendChild(listCol);
-		syncMapHeight();
-		container.appendChild(geo);
 	}
 
 	function refEmptyEl() {
@@ -2060,9 +2085,9 @@
 			s.innerHTML = '<div class="skeleton sk-label"></div><div class="skeleton sk-value"></div>';
 			$("#grid-kpis").appendChild(s);
 		}
-		["pages-body", "languages-body", "referrers-body", "browsers-body", "systems-body", "sizes-body", "geo-body", "campaigns-body"].forEach((id) => {
+		["pages-body", "languages-body", "referrers-body", "browsers-body", "systems-body", "sizes-body", "geo-map-body", "geo-list-body", "campaigns-body"].forEach((id) => {
 			$("#" + id).innerHTML = "";
-			$("#" + id).appendChild(skeletonCard(id === "geo-body" ? 280 : 200));
+			$("#" + id).appendChild(skeletonCard(id === "geo-map-body" ? 280 : 200));
 		});
 
 		const range = getDateRange(currentPreset, customStart, customEnd);
@@ -2084,7 +2109,7 @@
 			renderReferrers(data.toprefs ? data.toprefs.stats : [], GOATDASH_DEMO.refDetails);
 			renderDonutsDemo(data);
 			renderGeoDemo(data);
-			if (data.campaigns.stats.length) { $("#campaigns-card").hidden = false; renderCampaignsDemo(data.campaigns.stats); }
+			if (data.campaigns.stats.length) { $("#campaigns-tab").hidden = false; renderCampaignsDemo(data.campaigns.stats); }
 			updateFreshness();
 			return;
 		}
@@ -2176,7 +2201,7 @@
 			// La petición ya está en vuelo desde el arranque (fire), así que el
 			// render solo espera a que llegue el dato ya solicitado.
 			await Promise.all([
-				lazy("browsers", "#donut-row", async () => {
+				lazy("browsers", "#devices-card", async () => {
 					if (current.cancelled) return;
 					const [b, s, z] = await Promise.allSettled([pBrowsers, pSystems, pSizes]);
 					if (current.cancelled) return;
@@ -2197,10 +2222,10 @@
 						if (loc.__error.kind === "auth") return handleAuthError(loc.__error.message);
 						throw loc.__error;
 					}
-					renderGeo($("#geo-body"), loc.stats, loc.total, client);
+					renderGeo($("#geo-map-body"), $("#geo-list-body"), loc.stats, loc.total, client);
 				}),
 
-				lazy("campaigns", "#campaigns-card", async () => {
+				lazy("campaigns", "#content-card", async () => {
 					if (current.cancelled) return;
 					const camps = await pCampaigns;
 					if (current.cancelled) return;
@@ -2209,7 +2234,7 @@
 						throw camps.__error;
 					}
 					if (camps.stats && camps.stats.length) {
-						$("#campaigns-card").hidden = false;
+						$("#campaigns-tab").hidden = false;
 						renderTopList($("#campaigns-body"), camps.stats, { total: camps.total, page: "campaigns", onRowClick: (item, row) => toggleDetail(row, "campaigns", item.id || item.name, item.name, { demo: null, kind: "stats" }) });
 					}
 				}),
@@ -2491,7 +2516,7 @@
 	}
 
 	function renderGeoDemo(data) {
-		renderGeo($("#geo-body"), data.locations.stats, data.locations.total, null);
+		renderGeo($("#geo-map-body"), $("#geo-list-body"), data.locations.stats, data.locations.total, null);
 	}
 
 	function renderCampaignsDemo(stats) {
@@ -2728,6 +2753,7 @@
 		initSidebar();
 		initControls();
 		initPathFilter();
+		initCardTabs();
 		// Sesiones largas: poda periódica para que la caché no llene la cuota
 		// mientras la pestaña lleva horas abierta.
 		setInterval(pruneCache, CACHE_PRUNE_MS);
