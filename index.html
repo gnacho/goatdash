@@ -6,8 +6,8 @@
 <title>Goatdash</title>
 <meta name="description" content="A privacy-friendly dashboard for GoatCounter analytics. No cookies, no tracking, no servers.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b5884'/%3E%3Cpath d='M11 21V9h2v10h3V7h2v12h3V9h2v12z' fill='white' transform='translate(-1 1)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css?v=46">
-<script src="theme.js?v=46"></script>
+<link rel="stylesheet" href="styles.css?v=47">
+<script src="theme.js?v=47"></script>
 </head>
 <body>
 <div id="update-banner" class="update-banner" hidden>
@@ -150,63 +150,68 @@
 				</div>
 				<div class="chart-body" id="traffic-body"></div>
 			</div>
-			<div class="grid-7-3">
-				<div class="card" id="pages-card">
-					<div class="card-head">
-						<h2 data-i18n="card.pages">Páginas principales</h2>
-						<div class="page-filter" id="page-filter">
-							<div class="filter-input-wrap">
-								<input type="text" id="path-filter-input" autocomplete="off" spellcheck="false" aria-label="Filtrar por ruta">
-								<div class="filter-suggest" id="filter-suggest" hidden></div>
-							</div>
-							<div class="filter-chip" id="filter-chip" hidden>
-								<span id="filter-chip-label"></span>
-								<button type="button" id="filter-chip-clear" aria-label="Quitar filtro">✕</button>
-							</div>
-						</div>
+			<div class="grid-panels">
+				<!-- Fuentes -->
+				<div class="card panel-card" id="sources-card">
+					<div class="card-head tabs" role="tablist">
+						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="referrers" data-i18n="card.referrers">Referencias</button>
+						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="languages" data-i18n="card.languages">Idiomas</button>
 					</div>
-					<div class="card-body" id="pages-body"></div>
-				</div>
-				<div class="col-stack">
-					<div class="card" id="referrers-card">
-						<div class="card-head">
-							<h2 data-i18n="card.referrers">Referencias</h2>
-						</div>
+					<div class="panel" role="tabpanel" data-panel="referrers">
 						<div class="card-body" id="referrers-body"></div>
 					</div>
-					<div class="card" id="languages-card">
-						<div class="card-head">
-							<h2 data-i18n="card.languages">Idiomas</h2>
-						</div>
+					<div class="panel" role="tabpanel" data-panel="languages" hidden>
 						<div class="card-body" id="languages-body"></div>
 					</div>
 				</div>
-			</div>
-			<div class="grid-3" id="donut-row">
-				<div class="card" id="browsers-card">
-					<div class="card-head"><h2 data-i18n="card.browsers">Navegadores</h2></div>
-					<div class="card-body" id="browsers-body"></div>
+
+				<!-- Contenido -->
+				<div class="card panel-card" id="content-card">
+					<div class="card-head tabs" role="tablist">
+						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="pages" data-i18n="card.pages">Páginas principales</button>
+						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="campaigns" id="campaigns-tab" data-i18n="card.campaigns" hidden>Campañas</button>
+					</div>
+					<div class="panel" role="tabpanel" data-panel="pages">
+						<div class="panel-toolbar">
+							<div class="page-filter" id="page-filter">
+								<div class="filter-input-wrap">
+									<input type="text" id="path-filter-input" autocomplete="off" spellcheck="false" aria-label="Filtrar por ruta">
+									<div class="filter-suggest" id="filter-suggest" hidden></div>
+								</div>
+								<div class="filter-chip" id="filter-chip" hidden>
+									<span id="filter-chip-label"></span>
+									<button type="button" id="filter-chip-clear" aria-label="Quitar filtro">✕</button>
+								</div>
+							</div>
+						</div>
+						<div class="card-body" id="pages-body"></div>
+					</div>
+					<div class="panel" role="tabpanel" data-panel="campaigns" hidden>
+						<div class="card-body" id="campaigns-body"></div>
+					</div>
 				</div>
-				<div class="card" id="systems-card">
-					<div class="card-head"><h2 data-i18n="card.systems">Sistemas</h2></div>
-					<div class="card-body" id="systems-body"></div>
+
+				<!-- Dispositivos -->
+				<div class="card panel-card" id="devices-card">
+					<div class="card-head tabs" role="tablist">
+						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="browsers" data-i18n="card.browsers">Navegadores</button>
+						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="systems" data-i18n="card.systems">Sistemas</button>
+						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="sizes" data-i18n="card.devices">Dispositivos</button>
+					</div>
+					<div class="panel" role="tabpanel" data-panel="browsers"><div class="card-body" id="browsers-body"></div></div>
+					<div class="panel" role="tabpanel" data-panel="systems" hidden><div class="card-body" id="systems-body"></div></div>
+					<div class="panel" role="tabpanel" data-panel="sizes" hidden><div class="card-body" id="sizes-body"></div></div>
 				</div>
-				<div class="card" id="sizes-card">
-					<div class="card-head"><h2 data-i18n="card.devices">Dispositivos</h2></div>
-					<div class="card-body" id="sizes-body"></div>
+
+				<!-- Ubicación -->
+				<div class="card panel-card" id="geo-card">
+					<div class="card-head tabs" role="tablist">
+						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="map" data-i18n="tab.map">Mapa</button>
+						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="list" data-i18n="tab.list">Lista</button>
+					</div>
+					<div class="panel" role="tabpanel" data-panel="map"><div class="card-body" id="geo-map-body"></div></div>
+					<div class="panel" role="tabpanel" data-panel="list" hidden><div class="card-body" id="geo-list-body"></div></div>
 				</div>
-			</div>
-			<div class="card" id="geo-card">
-				<div class="card-head">
-					<h2 data-i18n="card.countries">Países</h2>
-				</div>
-				<div class="card-body" id="geo-body"></div>
-			</div>
-			<div class="card" id="campaigns-card" hidden>
-				<div class="card-head">
-					<h2 data-i18n="card.campaigns">Campañas</h2>
-				</div>
-				<div class="card-body" id="campaigns-body"></div>
 			</div>
 			</main>
 		</div>
@@ -227,9 +232,9 @@
 	</dialog>
 </div>
 
-<script src="assets/world-map.js?v=46"></script>
-<script src="fixtures.js?v=46"></script>
-<script src="app.js?v=46"></script>
-<script src="update-check.js?v=46"></script>
+<script src="assets/world-map.js?v=47"></script>
+<script src="fixtures.js?v=47"></script>
+<script src="app.js?v=47"></script>
+<script src="update-check.js?v=47"></script>
 </body>
 </html>
