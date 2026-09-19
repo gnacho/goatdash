@@ -43,9 +43,9 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 
 ## Características
 
-- **Dashboard multi-sitio**: barra lateral con la cuenta y sus subsitios desde `/api/v0/sites`. Cada sitio se consulta en su propio dominio vía CORS, con el binario oficial de GoatCounter. También funciona con un solo sitio.
-- **Alcance de sitios por token**: la barra lateral muestra solo los sitios que la API key puede leer (`token.sites` de `/api/v0/me`), así que cada clave se puede restringir a un subconjunto de sitios.
-- **Precache de sitios de la barra lateral**: tras cargar el sitio activo, goatdash calienta en segundo plano la caché del resto de sitios, así que cambiar de sitio es casi instantáneo. Solo pide los endpoints esenciales y se cancela si cambias.
+- **Home con tarjetas de sitio estilo Plausible**: una rejilla de tarjetas (tres por fila) con la cuenta y sus subsitios desde `/api/v0/sites`. Cada tarjeta muestra los visitantes únicos de las últimas 24h, una sparkline horaria y la tendencia vs las 24h anteriores. Ordena por visitantes o por nombre, ascendente o descendente, y filtra con un buscador. Al pinchar una tarjeta se abre el dashboard completo de ese sitio; el botón de la casa en la barra superior vuelve al home.
+- **Alcance de sitios por token**: el home lista solo los sitios que la API key puede leer (`token.sites` de `/api/v0/me`), así que cada clave se puede restringir a un subconjunto de sitios.
+- **Precache de sitios**: tras cargar el sitio activo, goatdash calienta en segundo plano la caché del resto de sitios, así que cambiar de sitio es casi instantáneo. Solo pide los endpoints esenciales y se cancela si cambias.
 - **Cinco tarjetas de KPI**: visitantes únicos (con tendencia vs el periodo anterior), páginas vistas, página principal, rutas rastreadas y total de eventos, en una rejilla sin huecos.
 - **Referrers principales por canal**: referrers globales agrupados en directo, buscadores, campañas y otros sitios, con drill desde cada referrer a las páginas que trajo.
 - **Drill en cada tarjeta**: de páginas a sus referrers, de navegadores/sistemas/dispositivos a versiones, de países a regiones, de campañas a sus URLs de referrer.
@@ -54,7 +54,7 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 - **Tema tri-estado con anti-FOUC**: oscuro, claro o auto, conmutado en la topbar (botones con texto, solo iconos en móvil) y aplicado antes de pintar por un `theme.js` externo que funciona con un CSP estricto `default-src 'self'`.
 - **Recargas instantáneas**: un service worker diminuto sirve el shell de la app desde el navegador (HTML network-first para que siempre te llegue la versión desplegada, assets versionados cache-first), y las respuestas de la API se cachean por rango con stale-while-revalidate, así que una recarga pinta en milisegundos incluso con una conexión lenta.
 - **Idioma**: UI en ES/EN/Auto, persistida en localStorage.
-- **Menú Ajustes con Acerca de**: el menú de engranaje abre Acerca de, que muestra la versión (0.90.0) y un enlace al código fuente.
+- **Menú Ajustes con Acerca de**: el menú de engranaje abre Acerca de, que muestra la versión (1.0.8) y un enlace al código fuente.
 - **Usuario conectado en la topbar**: un chip con tu avatar y tu email desde `/api/v0/me`.
 - **Modo demo**: un clic carga el dashboard completo con datos de ejemplo realistas, sin necesidad de API key.
 - **Respeto a la API**: caché de respuesta de 60 segundos, un cliente concurrente pequeño que lee `X-Rate-Limit-Remaining` y `Retry-After` y se adapta para no superar nunca el límite del servidor, reintento por tarjeta e indicador de "actualizado hace Xs".
@@ -62,12 +62,12 @@ El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que que
 
 ## Capturas
 
-**Multi-sitio: barra lateral con la cuenta y sus subsitios**
+**Home: tarjetas de sitio con visitantes 24h, sparkline y tendencia**
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-sidebar-es-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/screenshot-sidebar-es-light.png">
-  <img alt="Dashboard de goatdash con la barra lateral abierta, listando la cuenta y sus subsitios" src="assets/screenshot-sidebar-es-light.png" width="800">
+  <img alt="Home de goatdash con una rejilla de tarjetas de sitio, cada una con visitantes de 24h, sparkline y tendencia" src="assets/screenshot-sidebar-es-light.png" width="800">
 </picture>
 
 **Referencias: principales referrers agrupados por canal con drill**
@@ -160,7 +160,7 @@ Propuse aguas arriba un header `X-Goatcounter-Site` en el [PR #915](https://gith
 
 ## Uso
 
-Abre la página y pulsa **Probar demo** para explorarla con datos de ejemplo, o introduce tu URL de GoatCounter y tu API key para conectar. La barra lateral lista la cuenta y sus subsitios, el control segmentado cambia entre hoy/7d/30d/90d/personalizado, y el menú de engranaje guarda actualizar, tema, idioma y desconectar.
+Abre la página y pulsa **Probar demo** para explorarla con datos de ejemplo, o introduce tu URL de GoatCounter y tu API key para conectar. Con más de un sitio aterrizas en el home: una tarjeta por sitio con sus visitantes de las últimas 24h, sparkline y tendencia; al pinchar una tarjeta se abre su dashboard y el botón de la casa vuelve. El control segmentado cambia entre hoy/7d/30d/90d/personalizado, y el menú de engranaje guarda actualizar, tema, idioma y desconectar.
 
 Pulsa casi cualquier cosa para hacer drill: una página muestra sus referrers, un referrer muestra las páginas que trajo, un navegador muestra versiones, un país muestra regiones, una campaña muestra sus URLs. El menú de actualizar limpia la caché y vuelve a pedirlo todo.
 
