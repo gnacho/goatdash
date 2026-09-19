@@ -7,6 +7,9 @@
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const root = document.documentElement;
 
+  /* Sin JavaScript no se oculta nada: los reveals se activan solo con JS */
+  root.classList.add('js');
+
   /* Capturas: orden de las vistas + alt por idioma */
   const SLIDES = ['cover', 'pages', 'donuts', 'geo'];
   const SHOT_ALT = {
@@ -178,19 +181,45 @@
     io.observe(statsSection);
   }
 
-  /* Freshness "actualizado hace Ns" en el panel vivo */
-  function tickFreshness() {
-    const el = document.getElementById('liveFoot');
-    if (!el) return;
-    const dict = I18N[root.lang] || I18N.es;
-    const key = dict['misc.updated'] || 'updated {{n}}s ago';
-    let n = 0;
-    function render() {
-      el.textContent = key.replace('{{n}}', String(n));
-      n += 1;
-    }
-    render();
-    setInterval(render, 1000);
+  /* ---------- Menú de sección en móvil ---------- */
+  const navToggle = document.getElementById('navToggle');
+  const navEl = document.querySelector('.nav');
+  function closeNav() {
+    if (!navEl) return;
+    navEl.classList.remove('open');
+    if (navToggle) navToggle.setAttribute('aria-expanded', 'false');
+  }
+  if (navToggle && navEl) {
+    navToggle.addEventListener('click', function () {
+      const open = navEl.classList.toggle('open');
+      navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    navEl.querySelectorAll('.nav-links a').forEach(function (a) {
+      a.addEventListener('click', closeNav);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && navEl.classList.contains('open')) {
+        closeNav();
+        navToggle.focus();
+      }
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 900) closeNav();
+    });
+  }
+
+  /* ---------- Pista de scroll en la tabla comparativa ---------- */
+  const tableWrap = document.querySelector('.table-wrap');
+  const tableScroll = document.querySelector('.table-scroll');
+  if (tableWrap && tableScroll) {
+    const syncTableHint = function () {
+      const scrollable = tableWrap.scrollWidth > tableWrap.clientWidth + 2;
+      tableScroll.classList.toggle('scrollable', scrollable);
+      tableScroll.classList.toggle('at-end', !scrollable || tableWrap.scrollLeft + tableWrap.clientWidth >= tableWrap.scrollWidth - 8);
+    };
+    tableWrap.addEventListener('scroll', syncTableHint);
+    window.addEventListener('resize', syncTableHint);
+    syncTableHint();
   }
 
   /* ---------- Slider de capturas ---------- */
@@ -305,17 +334,24 @@
   /* ---------- Copiar comando ---------- */
   const copyBtn = document.getElementById('copyBtn');
   const installCmd = document.getElementById('installCmd');
+  let copyResetTimer = null;
+  function setCopyLabel(key) {
+    const dict = I18N[root.lang] || I18N.es;
+    if (dict[key]) copyBtn.textContent = dict[key];
+  }
+  function flashCopy(key, ms) {
+    setCopyLabel(key);
+    if (copyResetTimer) window.clearTimeout(copyResetTimer);
+    copyResetTimer = window.setTimeout(function () { setCopyLabel('misc.copy'); }, ms);
+  }
   if (copyBtn && installCmd) {
     copyBtn.addEventListener('click', function () {
-      const text = installCmd.textContent.replace(/&/g, '&').trim();
-      const done = function () {
-        const dict = I18N[root.lang] || I18N.es;
-        const orig = copyBtn.textContent;
-        copyBtn.textContent = dict['misc.copied'] || (root.lang === 'es' ? 'Copiado ✓' : 'Copied ✓');
-        setTimeout(function () { copyBtn.textContent = orig; }, 1600);
-      };
+      const text = installCmd.textContent.trim();
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done);
+        navigator.clipboard.writeText(text).then(
+          function () { flashCopy('misc.copied', 1600); },
+          function () { flashCopy('misc.copyError', 2200); }
+        );
       } else {
         const ta = document.createElement('textarea');
         ta.value = text;
@@ -328,9 +364,10 @@
         ta.focus();
         ta.select();
         ta.setSelectionRange(0, ta.value.length);
-        try { document.execCommand('copy'); } catch (e) { /* noop */ }
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
         document.body.removeChild(ta);
-        done();
+        flashCopy(ok ? 'misc.copied' : 'misc.copyError', ok ? 1600 : 2200);
       }
     });
   }
@@ -383,7 +420,6 @@
   drawBars(true);
   observePanel();
   observeStats();
-  tickFreshness();
   spawnParticles();
   renderShot(0);
 
