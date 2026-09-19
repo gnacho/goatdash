@@ -43,18 +43,21 @@ Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it 
 
 ## Features
 
-- **Multi-site dashboard**: sidebar with the account and its subsites from `/api/v0/sites`. Each site is queried at its own domain over CORS, using the official GoatCounter binary. Works for one site too.
-- **Per-token site scope**: the sidebar shows only the sites the API key is allowed to read (`token.sites` from `/api/v0/me`), so each key can be restricted to a subset of sites.
-- **Sidebar site precache**: after the active site loads, goatdash warms the cache for the other sites in the background, so switching sites is almost instant. It only fetches the essential endpoints and cancels if you switch.
+- **Home with Plausible-style site cards**: a grid of cards (three per row) with the account and its subsites from `/api/v0/sites`. Each card shows unique visitors in the last 24h, an hourly sparkline and the trend vs the previous 24h. Sort by visitors or name, ascending or descending, and filter with a search box. Clicking a card opens that site's full dashboard; the house button in the topbar goes back home.
+- **Per-token site scope**: the home lists only the sites the API key is allowed to read (`token.sites` from `/api/v0/me`), so each key can be restricted to a subset of sites.
+- **Site precache**: after the active site loads, goatdash warms the cache for the other sites in the background, so switching sites is almost instant. It only fetches the essential endpoints and cancels if you switch.
 - **Five KPI cards**: unique visitors (with trend vs the previous period), pageviews, top page, tracked paths and total events, in a gapless grid.
 - **Top referrers by channel**: global referrers grouped into direct, search engines, campaigns and other sites, with a drill-down from each referrer to the pages it brought.
 - **Drill-down on every card**: pages to their referrers, browsers/systems/devices to versions, countries to regions, campaigns to their referrer URLs.
 - **Choropleth world map**: countries shaded by visits with a square-root scale so small markets stay visible, plus hover tooltips, a gradient legend, zoom, pan and reset.
-- **Flexible ranges**: today, 7d, 30d, 90d or a custom start/end date.
-- **Tri-state theme with anti-FOUC**: dark, light or auto, switched in the topbar (labeled buttons, icons only on mobile) and applied before paint by an external `theme.js` script that works with a strict `default-src 'self'` CSP.
-- **Instant reloads**: a tiny service worker serves the app shell from the browser (HTML network-first so you always get the deployed version, versioned assets cache-first), and API responses are cached per range with stale-while-revalidate, so a reload paints in milliseconds even on a slow connection.
+- **Grouped panels with tabs**: Sources (referrers/languages), Content (pages/campaigns), Devices (browsers/systems/sizes) and Location (map/list) live in four tabbed cards on a 6-column grid (devices 1/3, location 2/3), each expandable to a full-screen modal.
+- **Rich date picker**: today, yesterday, realtime (60s auto-refresh with LIVE badge), 7d, 30d, 90d, 365d, month/year to date, all time or a custom range, with automatic chart grouping and a comparison toggle that overlays the previous period (dashed line).
+- **Site settings editor**: collect flags, ignored IPs and data retention, written via `PATCH /api/v0/sites/{id}`; read-only when the API key lacks the SiteUpdate permission.
+- **CSV export**: one click exports the visible dataset of pages, referrers, browsers, systems, devices, location or campaigns.
+- **Tri-state theme with anti-FOUC**: dark, light or auto, from the user menu and applied before paint by an external `theme.js` script that works with a strict `default-src 'self'` CSP.
+- **Instant reloads**: a tiny service worker serves the app shell from the browser (stale-while-revalidate HTML, versioned assets cache-first), and API responses are cached per range, so a reload paints in milliseconds even on a slow connection.
 - **Language**: ES/EN/Auto UI, persisted in localStorage.
-- **Settings menu with About**: the gear menu opens About, which shows the version (0.90.0) and a link to the source.
+- **User menu with About**: the menu opens from your user chip and shows the version (1.0.8) and a link to the source.
 - **Signed-in user in the topbar**: a chip with your avatar and email from `/api/v0/me`.
 - **Demo mode**: one click loads the full dashboard with realistic sample data, no API key needed.
 - **Polite to the API**: 60-second response cache, a small concurrent client that reads `X-Rate-Limit-Remaining` and `Retry-After` and adapts so it never exceeds the server limit, per-card retry and an "updated Xs ago" freshness indicator.
@@ -62,12 +65,12 @@ Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it 
 
 ## Screenshots
 
-**Multi-site: sidebar with the account and its subsites**
+**Home: site cards with 24h visitors, sparkline and trend**
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-sidebar-en-dark.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/screenshot-sidebar-en-light.png">
-  <img alt="goatdash dashboard with the sidebar open, listing the account and its subsites" src="assets/screenshot-sidebar-en-light.png" width="800">
+  <img alt="goatdash home with a grid of site cards, each showing 24h visitors, a sparkline and the trend" src="assets/screenshot-sidebar-en-light.png" width="800">
 </picture>
 
 **Referrers: top referrers grouped by channel with a drill-down**
@@ -158,7 +161,7 @@ I proposed an `X-Goatcounter-Site` header upstream in [PR #915](https://github.c
 
 ## Usage
 
-Open the page and click **Try Demo** to explore with sample data, or enter your GoatCounter URL and API key to connect. The sidebar lists the account and its subsites, the segmented control switches between today/7d/30d/90d/custom, and the gear menu holds refresh, theme, language and disconnect.
+Open the page and click **Try Demo** to explore with sample data, or enter your GoatCounter URL and API key to connect. With more than one site you land on the home: a card per site with its last-24h visitors, sparkline and trend; clicking a card opens the dashboard, and the house button goes back. The segmented control switches between today/7d/30d/90d/custom, and the gear menu holds refresh, theme, language and disconnect.
 
 Click almost anything to drill down: a page shows its referrers, a referrer shows the pages it brought, a browser shows versions, a country shows regions, a campaign shows the referrer URLs. The refresh menu clears the cache and fetches everything again.
 

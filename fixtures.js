@@ -23,11 +23,11 @@ window.GOATDASH_DEMO = (() => {
 	];
 
 	const DEMO_REFS = {
-		"/": [ { name: "news.ycombinator.com", count: 231 }, { name: "twitter.com", count: 87 }, { name: "(direct)", count: 64 }, { name: "reddit.com", count: 41 }, { name: "lobste.rs", count: 18 } ],
+		"/": [ { name: "news.ycombinator.com", count: 231 }, { name: "twitter.com", count: 87 }, { name: "(direct)", count: 64 }, { name: "indiehackers.com", count: 41 }, { name: "lobste.rs", count: 18 } ],
 		"/docs": [ { name: "google.com", count: 66 }, { name: "(direct)", count: 31 }, { name: "github.com", count: 12 } ],
-		"/blog/self-hosting-analytics": [ { name: "news.ycombinator.com", count: 142 }, { name: "twitter.com", count: 39 }, { name: "reddit.com", count: 24 } ],
+		"/blog/self-hosting-analytics": [ { name: "news.ycombinator.com", count: 142 }, { name: "twitter.com", count: 39 }, { name: "indiehackers.com", count: 24 } ],
 		"/pricing": [ { name: "(direct)", count: 29 }, { name: "google.com", count: 21 }, { name: "blog/self-hosting-analytics", count: 15 } ],
-		"/blog/why-we-left-google-analytics": [ { name: "news.ycombinator.com", count: 96 }, { name: "reddit.com", count: 22 }, { name: "lobste.rs", count: 14 } ],
+		"/blog/why-we-left-google-analytics": [ { name: "news.ycombinator.com", count: 96 }, { name: "indiehackers.com", count: 22 }, { name: "lobste.rs", count: 14 } ],
 		"/about": [ { name: "(direct)", count: 17 }, { name: "github.com", count: 8 } ],
 		"/install": [ { name: "google.com", count: 23 }, { name: "(direct)", count: 11 } ],
 	};
@@ -76,7 +76,7 @@ window.GOATDASH_DEMO = (() => {
 		{ name: "twitter.com", count: 87, ref_scheme: "h" },
 		{ name: "github.com", count: 54, ref_scheme: "h" },
 		{ name: "lobste.rs", count: 41, ref_scheme: "h" },
-		{ name: "reddit.com", count: 38, ref_scheme: "h" },
+		{ name: "indiehackers.com", count: 38, ref_scheme: "h" },
 		{ name: "Google", count: 312, ref_scheme: "g" },
 		{ name: "launch", count: 96, ref_scheme: "c" },
 		{ name: "summer", count: 44, ref_scheme: "c" },
@@ -88,7 +88,7 @@ window.GOATDASH_DEMO = (() => {
 		"twitter.com": [ { name: "/", count: 60 }, { name: "/pricing", count: 27 } ],
 		"github.com": [ { name: "/docs", count: 41 }, { name: "/install", count: 13 } ],
 		"lobste.rs": [ { name: "/blog/why-we-left-google-analytics", count: 29 }, { name: "/", count: 12 } ],
-		"reddit.com": [ { name: "/", count: 22 }, { name: "/about", count: 16 } ],
+		"indiehackers.com": [ { name: "/", count: 22 }, { name: "/about", count: 16 } ],
 		"Google": [ { name: "/docs", count: 201 }, { name: "/install", count: 111 } ],
 		"launch": [ { name: "/", count: 96 } ],
 		"summer": [ { name: "/pricing", count: 44 } ],
@@ -150,7 +150,33 @@ window.GOATDASH_DEMO = (() => {
 		"7d": { visitors: 3842, prev: 3156, days: 7, group: "day" },
 		"30d": { visitors: 14873, prev: 11249, days: 30, group: "day" },
 		"90d": { visitors: 41247, prev: 28934, days: 90, group: "week" },
+		"365d": { visitors: 168540, prev: 121300, days: 365, group: "week" },
 	};
+
+	// Meta para los presets del date picker v3 que no están en la tabla fija:
+	// se derivan de la fecha actual (mtd/ytd) o escalan los ~480 vis/día.
+	function demoRangeMeta(preset) {
+		if (DEMO_RANGE_TOTALS[preset]) return DEMO_RANGE_TOTALS[preset];
+		const now = new Date();
+		let days = 30;
+		if (preset === "yesterday") days = 1;
+		else if (preset === "realtime") return { ...DEMO_RANGE_TOTALS.today };
+		else if (preset === "mtd") days = now.getDate();
+		else if (preset === "ytd") {
+			days = Math.max(1, Math.round((now - new Date(now.getFullYear(), 0, 1)) / 86400000) + 1);
+		} else if (preset === "all") days = 365 * 3;
+		const visitors = Math.round(483 * days);
+		return { visitors, prev: Math.round(visitors * 0.82), days, group: "day" };
+	}
+
+	// Sitios ficticios para el sidebar en modo demo (cnames tipo stats.* para
+	// ejercitar la etiqueta limpia y el fallback de favicon → chip).
+	const DEMO_SITES = [
+		{ id: 1, cname: "stats.goatdash.cloudless.club" },
+		{ id: 2, cname: "stats.easyzfs.dev", parent: 1 },
+		{ id: 3, cname: "analytics.netpulse.io", parent: 1 },
+		{ id: 4, cname: "blog.example.org", parent: 1 },
+	];
 
 	// Helpers ------------------------------------------------------------------
 
@@ -169,7 +195,7 @@ window.GOATDASH_DEMO = (() => {
 		});
 	}
 
-	function demoDailyShape(numDays) {
+	function demoDailyShape(numDays, base = 80) {
 		const out = [];
 		const today = new Date();
 		for (let i = numDays - 1; i >= 0; i--) {
@@ -179,42 +205,46 @@ window.GOATDASH_DEMO = (() => {
 			const weekend = dow === 0 || dow === 6 ? 0.55 : 1;
 			const trend = 1 + ((numDays - i) / numDays) * 0.3;
 			const noise = 0.85 + Math.random() * 0.3;
-			out.push({ day: d.toISOString().slice(0, 10), daily: Math.round(80 * weekend * trend * noise) });
+			out.push({ day: d.toISOString().slice(0, 10), daily: Math.round(base * weekend * trend * noise) });
 		}
 		return out;
 	}
 
+	// Forma horaria del día en curso, con la FORMA REAL de la API: un único
+	// entry { day, daily, hourly: [24] } (antes devolvía un entry por hora con
+	// `hourly` escalar y rompía buildTrafficSeries con el preset "Hoy").
 	function demoHourlyShape() {
 		const base = [2,1,1,1,1,1,2,4,7,9,11,13,14,13,12,12,11,9,8,7,6,5,4,3];
-		return base.map((b, h) => ({ hour: h, hourly: Math.round(b * 30 * (0.8 + Math.random() * 0.4)) }));
-	}
-
-	function demoWeeklyShape(numWeeks) {
-		const out = [];
-		const today = new Date();
-		for (let i = numWeeks - 1; i >= 0; i--) {
-			const d = new Date(today);
-			d.setDate(d.getDate() - 7 * i);
-			d.setDate(d.getDate() - d.getDay()); // snap to Sunday
-			const trend = 0.7 + ((numWeeks - i) / numWeeks) * 0.6;
-			out.push({ day: d.toISOString().slice(0, 10), daily: Math.round(2100 * trend * (0.9 + Math.random() * 0.2)) });
-		}
-		return out;
+		const hourly = base.map((b) => Math.round(b * 30 * (0.8 + Math.random() * 0.4)));
+		const today = new Date().toISOString().slice(0, 10);
+		return [{ day: today, daily: hourly.reduce((a, v) => a + v, 0), hourly }];
 	}
 
 	function buildDemoData(preset) {
-		const meta = DEMO_RANGE_TOTALS[preset] || DEMO_RANGE_TOTALS["30d"];
+		const meta = demoRangeMeta(preset);
 		const visitors = meta.visitors;
 		const pageviews = Math.round(visitors * 1.25);
 
-		let timeSeries;
-		if (meta.group === "hour") {
-			timeSeries = demoHourlyShape();
-		} else if (meta.group === "week") {
-			timeSeries = demoWeeklyShape(meta.days / 7);
-		} else {
-			timeSeries = demoDailyShape(meta.days);
-		}
+		// Serie temporal siempre diaria salvo "Hoy"/realtime (horaria): la
+		// agregación a semana/mes la hace el cliente (buildTrafficSeries), igual
+		// que con la API real. Así el último entry siempre es el día en curso.
+		const rawSeries = meta.group === "hour" ? demoHourlyShape() : demoDailyShape(meta.days);
+		const entrySum = (s) => (s.daily !== undefined ? s.daily : (s.hourly || []).reduce((a, v) => a + v, 0));
+
+		// Escala la serie base a un total objetivo: así hits[].stats suma lo
+		// mismo que hits[].count (KPIs, gráfica y ratio vistas/visita cuadran).
+		const scaleSeries = (raw, target, jitter = 0) => {
+			const rawTotal = raw.reduce((a, s) => a + entrySum(s), 0) || 1;
+			const f = target / rawTotal;
+			return raw.map((s) => {
+				const j = jitter ? 1 + jitter * (Math.random() - 0.5) : 1;
+				if (s.hourly) {
+					const hourly = s.hourly.map((v) => Math.round(v * f * j));
+					return { day: s.day, daily: hourly.reduce((a, v) => a + v, 0), hourly };
+				}
+				return { day: s.day, daily: Math.round(s.daily * f * j) };
+			});
+		};
 
 		const hits = distributeByWeight(DEMO_PATHS, pageviews).map((p, i) => ({
 			path: p.path,
@@ -222,20 +252,35 @@ window.GOATDASH_DEMO = (() => {
 			path_id: 1001 + i,
 			count: p.count,
 			event: !!p.event,
-			stats: timeSeries.map((s) => ({
-				day: s.day,
-				...(s.hourly ? { hourly: s.hourly } : { daily: s.daily }),
-			})),
+			stats: scaleSeries(rawSeries, p.count, 0.2),
 		}));
 		const totalEvents = hits.filter((h) => h.event).reduce((a, h) => a + h.count, 0);
+
+		// stats/total también trae serie de VISITANTES (coherente con el total)
+		// con el slot horario del día en curso para la KPI "última hora".
+		const totalStats = scaleSeries(rawSeries, visitors);
+		if (meta.group !== "hour" && totalStats.length) {
+			const hourlyToday = demoHourlyShape()[0];
+			const hf = hourlyToday.daily ? totalStats[totalStats.length - 1].daily / hourlyToday.daily : 1;
+			totalStats[totalStats.length - 1].hourly = hourlyToday.hourly.map((v) => Math.round(v * hf));
+		}
 
 		const mkStats = (weights, total) => distributeByWeight(weights, total).map((w) => ({
 			name: w.name, count: w.count,
 		}));
 
+		// Serie del PERIODO ANTERIOR (misma longitud, base algo menor) para la
+		// comparativa de la gráfica: total con stats (visitantes) y un hit
+		// sintético con la serie diaria/horaria (páginas vistas).
+		const prevVisitors = meta.prev;
+		const prevPageviews = Math.round(prevVisitors * 1.25);
+		const prevRaw = meta.group === "hour" ? demoHourlyShape() : demoDailyShape(meta.days, 66);
+		const prevTotalStats = scaleSeries(prevRaw, prevVisitors);
+		const prevHitsSeries = scaleSeries(prevRaw, prevPageviews);
+
 		return {
 			data: {
-				total: { total: visitors, total_utc: visitors, total_events: totalEvents },
+				total: { total: visitors, total_utc: visitors, total_events: totalEvents, stats: totalStats },
 				hits: { hits, total: pageviews, more: false },
 				browsers: { stats: mkStats(WEIGHTS.browsers, visitors) },
 				systems: { stats: mkStats(WEIGHTS.systems, visitors) },
@@ -245,12 +290,15 @@ window.GOATDASH_DEMO = (() => {
 				campaigns: { stats: mkStats(WEIGHTS.campaigns, Math.round(visitors * 0.15)) },
 				toprefs: { stats: DEMO_TOPREFS, more: false },
 			},
-			prevTotal: meta.prev,
+			prevTotal: prevVisitors,
+			prevTotalData: { total: prevVisitors, total_utc: prevVisitors, stats: prevTotalStats },
+			prevHitsData: { hits: [{ path: "/", stats: prevHitsSeries }], total: prevPageviews, more: false },
 		};
 	}
 
 	return {
 		build: buildDemoData,
+		sites: DEMO_SITES,
 		refs: DEMO_REFS,
 		browserDetails: DEMO_BROWSER_DETAILS,
 		systemDetails: DEMO_SYSTEM_DETAILS,

@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Goatdash</title>
 <meta name="description" content="A privacy-friendly dashboard for GoatCounter analytics. No cookies, no tracking, no servers.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232b5884'/%3E%3Cpath d='M11 21V9h2v10h3V7h2v12h3V9h2v12z' fill='white' transform='translate(-1 1)'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css?v=47">
-<script src="theme.js?v=47"></script>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=57">
+<link rel="stylesheet" href="styles.css?v=57">
+<script src="theme.js?v=57"></script>
 </head>
 <body>
 <div id="update-banner" class="update-banner" hidden>
@@ -20,7 +20,7 @@
 	<div id="connect-screen" class="connect" hidden>
 		<header class="connect-head">
 			<div class="brand">
-				<div class="brand-mark">G</div>
+				<div class="brand-mark"><svg viewBox="0 0 417 429" width="22" height="22" fill="none" stroke="#fff" stroke-width="44.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M25.399,235.075l118.517,-135.285c0,0 -124.734,-57.004 -120.995,-58.98c182.412,-96.381 370.769,214.033 370.769,214.033l-24.839,65.501c0,0 -169.954,-0.509 -192.464,-75.727"/><path d="M179.11,406.252c-0.044,-36.273 38.389,-117.225 38.389,-117.225"/></svg></div>
 				<div class="brand-name">Goatdash</div>
 			</div>
 			<div class="lang-wrap">
@@ -60,56 +60,45 @@
 
 	<div id="dash-screen" hidden>
 		<header class="topbar">
+			<div class="topbar-inner">
 			<div class="topbar-left">
-				<button id="sidebar-toggle" class="icon-btn hamburger" aria-expanded="false" hidden>☰</button>
-				<div class="brand small">
-					<div class="brand-mark small">G</div>
-					<div class="brand-name">Goatdash</div>
-				</div>
-				<nav class="seg" id="range-seg" role="tablist">
-					<button role="tab" data-preset="today" class="seg-btn" data-i18n="range.today">Hoy</button>
-					<button role="tab" data-preset="7d" class="seg-btn seg-active" data-i18n="range.d7">7d</button>
-					<button role="tab" data-preset="30d" class="seg-btn" data-i18n="range.d30">30d</button>
-					<button role="tab" data-preset="90d" class="seg-btn" data-i18n="range.d90">90d</button>
-					<button role="tab" data-preset="custom" class="seg-btn" data-i18n="range.custom">Personalizado</button>
-				</nav>
-				<div class="custom-range" id="custom-range" hidden>
-					<input type="date" id="custom-start" aria-label="Start date">
-					<span class="range-arrow">→</span>
-					<input type="date" id="custom-end" aria-label="End date">
+				<button id="back-btn" class="back-btn" aria-label="Inicio">
+					<svg id="back-icon-home" viewBox="0 0 32 32" width="21" height="21" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#9A15A4"/><g transform="translate(5 4.6) scale(0.0528)" fill="none" stroke="#fff" stroke-width="44.5" stroke-linecap="round" stroke-linejoin="round"><path d="M25.399,235.075l118.517,-135.285c0,0 -124.734,-57.004 -120.995,-58.98c182.412,-96.381 370.769,214.033 370.769,214.033l-24.839,65.501c0,0 -169.954,-0.509 -192.464,-75.727"/><path d="M179.11,406.252c-0.044,-36.273 38.389,-117.225 38.389,-117.225"/></g></svg>
+					<svg id="back-icon-back" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+					<span class="back-name">Goatdash</span>
+				</button>
+				<div class="site-switch" id="site-switch" hidden>
+					<button type="button" id="site-switch-btn" class="site-switch-btn" aria-haspopup="true" aria-expanded="false">
+						<span class="site-switch-ico" id="site-switch-ico"></span>
+						<span class="site-switch-name" id="site-switch-name"></span>
+						<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+					</button>
+					<div class="site-switch-menu" id="site-switch-menu" hidden>
+						<input type="search" id="site-switch-search" autocomplete="off" spellcheck="false">
+						<nav class="site-switch-list" id="site-switch-list" aria-label="Sitios"></nav>
+					</div>
 				</div>
 			</div>
 			<div class="topbar-right">
-			<button type="button" class="theme-toggle-mobile" id="theme-toggle-mobile" aria-label="Cambiar tema">
-				<svg class="sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-				<svg class="moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-			</button>
-			<div class="theme-switch" id="theme-switch" role="group" aria-label="Tema">
-				<button type="button" class="theme-icon" data-theme-option="auto" aria-pressed="false" aria-label="Auto">
-					<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-					<span class="theme-label" data-i18n="theme.auto">Auto</span>
-				</button>
-				<button type="button" class="theme-icon" data-theme-option="light" aria-pressed="false" aria-label="Claro">
-					<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-					<span class="theme-label" data-i18n="theme.light">Claro</span>
-				</button>
-				<button type="button" class="theme-icon" data-theme-option="dark" aria-pressed="false" aria-label="Oscuro">
-					<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-					<span class="theme-label" data-i18n="theme.dark">Oscuro</span>
-				</button>
-			</div>
 				<span class="freshness" id="freshness"></span>
-				<div class="user-chip" id="user-chip">
-					<span class="user-avatar" id="user-avatar" aria-hidden="true">?</span>
-					<span class="user-email" id="user-email"></span>
-				</div>
-				<div class="menu-wrap">
-					<button id="menu-btn" class="icon-btn settings-btn" aria-haspopup="true" aria-expanded="false" aria-label="Ajustes">
-						<span class="settings-gear" aria-hidden="true">⚙</span>
-						<span class="settings-label" data-i18n="menu.settings">Ajustes</span>
+				<div class="user-wrap">
+					<button type="button" class="user-chip" id="user-chip" aria-haspopup="true" aria-expanded="false">
+						<span class="user-avatar" id="user-avatar" aria-hidden="true">?</span>
+						<span class="user-email" id="user-email"></span>
+						<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
 					</button>
 					<div id="menu" class="menu" hidden>
 						<button id="refresh-btn" class="menu-item" data-i18n="menu.refresh">↻ Actualizar datos</button>
+						<button id="export-btn" class="menu-item" aria-haspopup="true" aria-expanded="false" data-i18n="menu.export">Exportar CSV</button>
+						<div id="export-menu" class="submenu" hidden>
+							<button type="button" class="submenu-item" data-export="pages" data-i18n="export.pages">Páginas</button>
+							<button type="button" class="submenu-item" data-export="referrers" data-i18n="export.referrers">Referencias</button>
+							<button type="button" class="submenu-item" data-export="browsers" data-i18n="export.browsers">Navegadores</button>
+							<button type="button" class="submenu-item" data-export="systems" data-i18n="export.systems">Sistemas</button>
+							<button type="button" class="submenu-item" data-export="devices" data-i18n="export.devices">Dispositivos</button>
+							<button type="button" class="submenu-item" data-export="geo" data-i18n="export.geo">Ubicación</button>
+							<button type="button" class="submenu-item" data-export="campaigns" data-i18n="export.campaigns">Campañas</button>
+						</div>
 						<button id="theme-btn" class="menu-item" aria-haspopup="true" aria-expanded="false">Tema: Oscuro</button>
 					<div id="theme-menu" class="submenu" role="radiogroup" aria-label="Theme" hidden>
 						<button type="button" class="submenu-item" role="radio" data-theme-option="auto" aria-checked="false" data-i18n="theme.auto">Auto</button>
@@ -122,11 +111,13 @@
 							<button type="button" class="submenu-item" role="radio" data-lang-option="en" aria-checked="false">English</button>
 							<button type="button" class="submenu-item" role="radio" data-lang-option="auto" aria-checked="false">Auto</button>
 						</div>
+						<button id="site-settings-btn" class="menu-item" data-i18n="menu.siteSettings">Configuración del sitio</button>
 						<button id="update-btn" class="menu-item" data-i18n="menu.checkUpdates">Comprobar actualizaciones</button>
 						<button id="about-btn" class="menu-item" data-i18n="menu.about">Acerca de</button>
 						<button id="disconnect-btn" class="menu-item danger" data-i18n="menu.disconnect">Desconectar</button>
 					</div>
 				</div>
+			</div>
 			</div>
 		</header>
 
@@ -137,16 +128,61 @@
 
 		<div id="error-banner" class="error-banner" hidden></div>
 
-		<div class="shell">
-			<aside class="sidebar" id="sidebar" hidden>
-				<nav class="sidebar-nav" id="sidebar-nav" aria-label="Sitios"></nav>
-			</aside>
-			<div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+		<main class="home" id="home-view" hidden>
+			<div class="home-toolbar">
+				<h1 class="home-title" data-i18n="home.title">Sitios</h1>
+				<div class="home-controls">
+					<input type="search" id="home-search" autocomplete="off" spellcheck="false">
+					<select id="home-sort" aria-label="Ordenar por"></select>
+					<button type="button" id="home-dir" class="icon-btn home-dir" aria-label="Cambiar dirección">
+						<svg id="home-dir-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+					</button>
+				</div>
+			</div>
+			<div class="home-grid" id="home-grid"></div>
+		</main>
+
+		<div class="shell" id="site-shell">
 			<main class="dashboard" id="dashboard">
 			<div class="grid-kpis" id="grid-kpis"></div>
 			<div class="chart-wrap card" id="traffic-card">
 				<div class="card-head">
-					<h2 data-i18n="card.traffic">Visitantes en el tiempo</h2>
+					<h2 id="traffic-title" data-i18n="card.traffic">Visitantes en el tiempo</h2>
+					<div class="chart-controls">
+					<button type="button" id="compare-btn" class="compare-btn" aria-pressed="false">
+						<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16v5"/><path d="M16 14.639V21"/><path d="M20 10.656V21"/><path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15"/><path d="M4 18.463V21"/><path d="M8 14.656V21"/></svg>
+						<span data-i18n="chart.compare">Comparar</span>
+					</button>
+				<div class="menu-wrap" id="range-wrap">
+					<button id="range-btn" class="range-btn" type="button" aria-haspopup="true" aria-expanded="false">
+						<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+						<span id="range-btn-label">Últimos 30 días</span>
+						<span id="live-badge" class="live-badge" hidden>LIVE</span>
+						<svg class="range-caret" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+					</button>
+					<div id="range-menu" class="menu range-menu" role="menu" hidden>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="today" aria-checked="false" data-i18n="range.today">Hoy</button>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="yesterday" aria-checked="false" data-i18n="range.yesterday">Ayer</button>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="realtime" aria-checked="false" data-i18n="range.realtime">Tiempo real</button>
+						<div class="menu-sep" role="separator"></div>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="7d" aria-checked="false" data-i18n="range.d7">Últimos 7 días</button>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="30d" aria-checked="false" data-i18n="range.d30">Últimos 30 días</button>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="90d" aria-checked="false" data-i18n="range.d90">Últimos 90 días</button>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="365d" aria-checked="false" data-i18n="range.y1">Últimos 365 días</button>
+						<div class="menu-sep" role="separator"></div>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="mtd" aria-checked="false" data-i18n="range.mtd">Mes en curso</button>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="ytd" aria-checked="false" data-i18n="range.ytd">Año en curso</button>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="all" aria-checked="false" data-i18n="range.all">Siempre</button>
+						<div class="menu-sep" role="separator"></div>
+						<button type="button" class="menu-item" role="menuitemradio" data-preset="custom" aria-checked="false" data-i18n="range.custom">Personalizado</button>
+						<div class="custom-range" id="custom-range" hidden>
+							<input type="date" id="custom-start" aria-label="Start date">
+							<span class="range-arrow">→</span>
+							<input type="date" id="custom-end" aria-label="End date">
+						</div>
+					</div>
+				</div>
+					</div>
 				</div>
 				<div class="chart-body" id="traffic-body"></div>
 			</div>
@@ -156,6 +192,7 @@
 					<div class="card-head tabs" role="tablist">
 						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="referrers" data-i18n="card.referrers">Referencias</button>
 						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="languages" data-i18n="card.languages">Idiomas</button>
+						<button type="button" class="expand-btn" data-expand="sources" aria-label="Expandir"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
 					</div>
 					<div class="panel" role="tabpanel" data-panel="referrers">
 						<div class="card-body" id="referrers-body"></div>
@@ -170,6 +207,7 @@
 					<div class="card-head tabs" role="tablist">
 						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="pages" data-i18n="card.pages">Páginas principales</button>
 						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="campaigns" id="campaigns-tab" data-i18n="card.campaigns" hidden>Campañas</button>
+						<button type="button" class="expand-btn" data-expand="content" aria-label="Expandir"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
 					</div>
 					<div class="panel" role="tabpanel" data-panel="pages">
 						<div class="panel-toolbar">
@@ -197,6 +235,7 @@
 						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="browsers" data-i18n="card.browsers">Navegadores</button>
 						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="systems" data-i18n="card.systems">Sistemas</button>
 						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="sizes" data-i18n="card.devices">Dispositivos</button>
+						<button type="button" class="expand-btn" data-expand="devices" aria-label="Expandir"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
 					</div>
 					<div class="panel" role="tabpanel" data-panel="browsers"><div class="card-body" id="browsers-body"></div></div>
 					<div class="panel" role="tabpanel" data-panel="systems" hidden><div class="card-body" id="systems-body"></div></div>
@@ -208,6 +247,7 @@
 					<div class="card-head tabs" role="tablist">
 						<button type="button" class="tab tab-active" role="tab" aria-selected="true" data-tab="map" data-i18n="tab.map">Mapa</button>
 						<button type="button" class="tab" role="tab" aria-selected="false" data-tab="list" data-i18n="tab.list">Lista</button>
+						<button type="button" class="expand-btn" data-expand="geo" aria-label="Expandir"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
 					</div>
 					<div class="panel" role="tabpanel" data-panel="map"><div class="card-body" id="geo-map-body"></div></div>
 					<div class="panel" role="tabpanel" data-panel="list" hidden><div class="card-body" id="geo-list-body"></div></div>
@@ -216,15 +256,59 @@
 			</main>
 		</div>
 
-		<footer class="foot" data-i18n="foot">Goatdash · dashboard de GoatCounter · código abierto</footer>
+		<footer class="foot">
+			<span data-i18n="foot">Goatdash · dashboard de GoatCounter · código abierto</span>
+			<span class="foot-meta">
+				<a class="foot-version" id="foot-version-link" href="https://github.com/gnacho/goatdash/releases" target="_blank" rel="noopener noreferrer"><span id="foot-version"></span></a>
+				<a class="foot-star" id="foot-star" href="https://github.com/gnacho/goatdash" target="_blank" rel="noopener noreferrer">
+					<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+					<span id="foot-stars"></span>
+					<span data-i18n="foot.star">Dame una estrella</span>
+				</a>
+			</span>
+		</footer>
 	</div>
+
+	<dialog id="expand-dialog" class="expand-dialog">
+		<div class="expand-head">
+			<h2 id="expand-title"></h2>
+			<button type="button" id="expand-close" class="icon-btn" aria-label="Cerrar">✕</button>
+		</div>
+		<div class="expand-body" id="expand-body"></div>
+	</dialog>
+
+	<dialog id="settings-dialog" class="settings-dialog">
+		<div class="about-head">
+			<h2 class="settings-title" data-i18n="settings.title">Configuración del sitio</h2>
+			<button type="button" id="settings-close" class="icon-btn" aria-label="Cerrar">✕</button>
+		</div>
+		<p class="settings-domain mono" id="settings-domain"></p>
+		<form id="settings-form" method="dialog">
+			<fieldset class="settings-fieldset" id="settings-collect">
+				<legend data-i18n="settings.collect">Qué se recolecta</legend>
+			</fieldset>
+			<div class="field">
+				<label for="settings-ignore-ips" data-i18n="settings.ignoreIps">IPs ignoradas</label>
+				<textarea id="settings-ignore-ips" rows="3" spellcheck="false"></textarea>
+				<p class="field-hint" data-i18n="settings.ignoreIpsHint">Una IP por línea o separadas por comas. El tráfico desde estas IPs no se cuenta.</p>
+			</div>
+			<div class="field">
+				<label for="settings-retention" data-i18n="settings.retention">Retención de datos (días)</label>
+				<input type="number" id="settings-retention" min="0" step="1">
+				<p class="field-hint" data-i18n="settings.retentionHint">0 = sin límite. Los hits más antiguos se borran periódicamente.</p>
+			</div>
+			<p class="settings-readonly" id="settings-readonly" hidden data-i18n="settings.readonly">Tu API key solo tiene permiso de lectura: puedes ver la configuración pero no editarla.</p>
+			<p class="settings-saved" id="settings-saved" hidden data-i18n="settings.saved">Guardado.</p>
+			<div class="settings-actions">
+				<button type="button" id="settings-cancel" class="btn-secondary" data-i18n="settings.close">Cerrar</button>
+				<button type="submit" id="settings-save" class="btn-primary" data-i18n="settings.save">Guardar</button>
+			</div>
+		</form>
+	</dialog>
 
 	<dialog id="about-dialog" class="about-dialog">
 		<div class="about-head">
-			<div class="brand small">
-				<div class="brand-mark small">G</div>
-				<div class="brand-name">Goatdash</div>
-			</div>
+			<div class="brand-name">Goatdash</div>
 			<button type="button" id="about-close" class="icon-btn" aria-label="Cerrar">✕</button>
 		</div>
 		<p class="about-version" id="about-version"></p>
@@ -232,9 +316,9 @@
 	</dialog>
 </div>
 
-<script src="assets/world-map.js?v=47"></script>
-<script src="fixtures.js?v=47"></script>
-<script src="app.js?v=47"></script>
-<script src="update-check.js?v=47"></script>
+<script src="assets/world-map.js?v=57"></script>
+<script src="fixtures.js?v=57"></script>
+<script src="app.js?v=57"></script>
+<script src="update-check.js?v=57"></script>
 </body>
 </html>
