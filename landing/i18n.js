@@ -2,9 +2,11 @@
 const I18N = {
   es: {
     'misc.skip': 'Saltar al contenido',
+    'misc.copy': 'Copiar',
     'misc.copied': 'Copiado ✓',
-    'misc.updated': 'actualizado hace {{n}}s',
-    'misc.free': 'Gratis',
+    'misc.copyError': 'No se pudo copiar',
+    'misc.theme': 'Cambiar tema',
+    'misc.lang': 'Idioma',
 
     'nav.features': 'Funciones',
     'nav.shots': 'Capturas',
@@ -12,6 +14,7 @@ const I18N = {
     'nav.pricing': 'Precio',
     'nav.faq': 'FAQ',
     'nav.demo': 'Probar demo',
+    'nav.menu': 'Menú',
 
     'hero.eyebrow': 'Un dashboard para GoatCounter',
     'hero.t1': 'GoatCounter, el motor.',
@@ -19,21 +22,15 @@ const I18N = {
     'hero.sub': 'Un visor ligero y privado para tu analítica de GoatCounter. Sin cookies, sin nube, sin framework: unos ficheros estáticos que leen tu instancia directamente y la pintan con claridad.',
     'hero.cta1': 'Probar demo',
     'hero.cta2': 'Ver el código',
-    'hero.cta3': 'Instalar',
 
     'live.pill': 'Datos de demo · 30 días',
     'live.visitors': 'Visitantes únicos',
     'live.pageviews': 'Páginas vistas',
     'live.topref': 'Principal referencia',
     'live.trend': 'vs periodo anterior',
-    'live.events': 'Eventos',
-
-    'why.eyebrow': 'Por qué existe',
-    'why.title': 'GoatCounter es genial. Esta es su capa de consulta.',
-    'why.p1': 'GoatCounter es un proyecto excelente: un solo binario, SQLite, sin tracking de datos personales y una API v0 que lo expone todo. Esta web no existe para sustituirlo ni para discutirle el stack.',
-    'why.p2': 'Pero la interfaz oficial está pensada para administrar el sitio, no solo para consultarlo. Para quien quiere ver los números cada mañana, para un perfil de marketing o para alguien que prefiere una vista clara, hace falta otra cosa. goatdash es eso: una interfaz de consulta, ligera y complementaria, con los ajustes del sitio a un clic.',
-    'why.p3': 'goatdash usa la API v0 de tu propia instancia y respeta sus decisiones técnicas: no hay fork ni segundo motor. La lectura es el grueso, y la escritura se limita a la configuración del sitio (IPs ignoradas, retención, qué se recolecta). Si usas un solo sitio, basta un GoatCounter sin parchear; si usas varios, cada uno en su dominio y la vista se encarga del resto.',
-    'why.demo': 'Abrir la demo',
+    'live.eventsStat': 'Eventos: 412',
+    'live.panel': 'Panel de cifras en vivo',
+    'live.demoTag': 'Datos de demo',
 
     'principles.eyebrow': 'Tres principios',
     'principles.title': 'Decisiones reales, no eslóganes.',
@@ -110,14 +107,15 @@ const I18N = {
     'shots.next': 'Captura siguiente',
     'shots.open': 'Ampliar captura',
     'shots.close': 'Cerrar',
+    'shots.group': 'Capturas',
+    'shots.t1': 'Portada',
+    'shots.t2': 'Páginas',
+    'shots.t3': 'Navegadores',
+    'shots.t4': 'Mapa',
 
     'compare.eyebrow': 'Comparativa',
     'compare.title': 'GoatCounter, la herramienta. goatdash, la vista.',
     'compare.lead': 'No compiten: se complementan. Matriz contrastada contra las fuentes públicas de GoatCounter y el repositorio de goatdash en agosto de 2026. La columna goatdash está resaltada.',
-    'compare.yes': 'Sí',
-    'compare.partial': 'Parcial',
-    'compare.no': 'No',
-    'compare.nappl': 'No aplica',
     'compare.legend': '✓ nativo · ◐ parcial · ✗ no · — no aplica',
     'compare.block1': 'La vista',
     'compare.block2': 'La gestión',
@@ -143,13 +141,6 @@ const I18N = {
     'install.req3': 'Sin Docker, sin Node, sin herramientas de build',
     'install.hint': 'Para el multi-sitio, cada sitio necesita su propio dominio apuntando al mismo GoatCounter; el binario oficial resuelve el sitio por el header Host.',
 
-    'about.eyebrow': 'Acerca de',
-    'about.title': 'Un proyecto personal.',
-    'about.p1': 'goatdash nació de usar GoatCounter a diario y de querer una vista a juego con el resto de mis proyectos: ligera, autohospedada y en el mismo estilo. Empezó como un rewrite del dashboard de Abhishekh Singh, que cargaba React y Recharts desde un CDN; para una página que solo lee una API JSON, ese peso sobraba.',
-    'about.p2': 'Crece con la misma regla que el resto de mi trabajo: cada versión corre primero en mi propia infraestructura, midiendo el hub completo desde agosto de 2026. Si algo no se usa, se quita.',
-    'about.expect': 'Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada. Es un proyecto personal, AGPL-3.0 y gratuito siempre.',
-    'about.support': 'Apoyar el proyecto',
-
     'faq.eyebrow': 'Preguntas frecuentes',
     'faq.title': 'Lo que te estás preguntando.',
     'faq.q1': '¿Qué es goatdash?',
@@ -172,15 +163,16 @@ const I18N = {
     'footer.license': 'Licencia AGPL-3.0',
     'footer.col2': 'Comunidad',
     'footer.club': 'El club cloudless',
-    'footer.ko': 'Ko-fi',
-    'footer.rights': 'Hecho con goatdash y, ahora, medido por él.'
+    'footer.ko': 'Ko-fi'
   },
 
   en: {
     'misc.skip': 'Skip to content',
+    'misc.copy': 'Copy',
     'misc.copied': 'Copied ✓',
-    'misc.updated': 'updated {{n}}s ago',
-    'misc.free': 'Free',
+    'misc.copyError': 'Could not copy',
+    'misc.theme': 'Toggle theme',
+    'misc.lang': 'Language',
 
     'nav.features': 'Features',
     'nav.shots': 'Screenshots',
@@ -188,6 +180,7 @@ const I18N = {
     'nav.pricing': 'Pricing',
     'nav.faq': 'FAQ',
     'nav.demo': 'Try demo',
+    'nav.menu': 'Menu',
 
     'hero.eyebrow': 'A dashboard for GoatCounter',
     'hero.t1': 'GoatCounter, the engine.',
@@ -195,21 +188,15 @@ const I18N = {
     'hero.sub': 'A light, private viewer for your GoatCounter analytics. No cookies, no cloud, no framework: a few static files that read your instance directly and draw it clearly.',
     'hero.cta1': 'Try demo',
     'hero.cta2': 'View the code',
-    'hero.cta3': 'Install',
 
     'live.pill': 'Demo data · 30 days',
     'live.visitors': 'Unique visitors',
     'live.pageviews': 'Pageviews',
     'live.topref': 'Top referrer',
     'live.trend': 'vs previous period',
-    'live.events': 'Events',
-
-    'why.eyebrow': 'Why it exists',
-    'why.title': 'GoatCounter is great. This is its query layer.',
-    'why.p1': 'GoatCounter is an excellent project: a single binary, SQLite, no personal data tracking and a v0 API that exposes everything. This page does not exist to replace it or to argue with its stack.',
-    'why.p2': 'But the official interface is built to administer the site, not just to consult it. For someone who wants to see the numbers every morning, for a marketing profile or for anyone who prefers a clear view, something else is needed. goatdash is that: a light, complementary query interface, with the site settings one click away.',
-    'why.p3': 'goatdash uses the v0 API of your own instance and respects its technical decisions: no fork, no second engine. Reading is the bulk of it, and writing is limited to the site configuration (ignored IPs, retention, what is collected). With one site, an unpatched GoatCounter is enough; with several, each lives on its own domain and the view handles the rest.',
-    'why.demo': 'Open the demo',
+    'live.eventsStat': 'Events: 412',
+    'live.panel': 'Live figures panel',
+    'live.demoTag': 'Demo data',
 
     'principles.eyebrow': 'Three principles',
     'principles.title': 'Real decisions, not slogans.',
@@ -286,14 +273,15 @@ const I18N = {
     'shots.next': 'Next screenshot',
     'shots.open': 'Enlarge screenshot',
     'shots.close': 'Close',
+    'shots.group': 'Screenshots',
+    'shots.t1': 'Cover',
+    'shots.t2': 'Pages',
+    'shots.t3': 'Browsers',
+    'shots.t4': 'Map',
 
     'compare.eyebrow': 'Compare',
     'compare.title': 'GoatCounter, the tool. goatdash, the view.',
     'compare.lead': 'They do not compete: they complement each other. Matrix cross-checked against GoatCounter public sources and the goatdash repository in August 2026. The goatdash column is highlighted.',
-    'compare.yes': 'Yes',
-    'compare.partial': 'Partial',
-    'compare.no': 'No',
-    'compare.nappl': 'N/A',
     'compare.legend': '✓ native · ◐ partial · ✗ no · — n/a',
     'compare.block1': 'The view',
     'compare.block2': 'The administration',
@@ -319,13 +307,6 @@ const I18N = {
     'install.req3': 'No Docker, no Node, no build tools',
     'install.hint': 'For multi-site, each site needs its own domain pointing at the same GoatCounter; the official binary resolves the site from the Host header.',
 
-    'about.eyebrow': 'About',
-    'about.title': 'A personal project.',
-    'about.p1': 'goatdash came from using GoatCounter every day and wanting a view that matched the rest of my projects: light, self-hosted and with the same style. It started as a rewrite of Abhishekh Singh\'s dashboard, which loaded React and Recharts from a CDN; for a page that only reads a JSON API, that weight was not needed.',
-    'about.p2': 'It grows with the same rule as the rest of my work: every version runs first on my own infrastructure, measuring the whole hub since August 2026. If it is not used, it goes away.',
-    'about.expect': 'With contributions or support it might grow faster, but I cannot promise anything. It is a personal project, AGPL-3.0 and always free.',
-    'about.support': 'Support the project',
-
     'faq.eyebrow': 'Frequently asked',
     'faq.title': 'What you are asking.',
     'faq.q1': 'What is goatdash?',
@@ -348,7 +329,6 @@ const I18N = {
     'footer.license': 'AGPL-3.0 license',
     'footer.col2': 'Community',
     'footer.club': 'The cloudless club',
-    'footer.ko': 'Ko-fi',
-    'footer.rights': 'Made with goatdash and, now, measured by it.'
+    'footer.ko': 'Ko-fi'
   }
 };
