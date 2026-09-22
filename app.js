@@ -55,6 +55,10 @@
 			"menu.settings": "Ajustes",
 			"menu.about": "Acerca de",
 			"menu.checkUpdates": "Comprobar actualizaciones",
+			"menu.autoRefresh": "Actualización automática: {opt}",
+			"refresh.off": "Desactivada",
+			"refresh.1m": "Cada minuto",
+			"refresh.5m": "Cada 5 min",
 			"update.upToDate": "Ya estás al día (v{v}).",
 			"update.err": "No se pudo comprobar la última versión.",
 			"about.version": "Versión {v}",
@@ -248,6 +252,10 @@
 			"menu.settings": "Settings",
 			"menu.about": "About",
 			"menu.checkUpdates": "Check for updates",
+			"menu.autoRefresh": "Auto-refresh: {opt}",
+			"refresh.off": "Off",
+			"refresh.1m": "Every minute",
+			"refresh.5m": "Every 5 min",
 			"update.upToDate": "You are up to date (v{v}).",
 			"update.err": "Could not check for the latest version.",
 			"about.version": "Version {v}",
@@ -399,12 +407,13 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "1.0.8";
+	const VERSION = "1.0.10";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const HOME_SORT_KEY = "gc-home-sort-v1";
 	const THEME_KEY = "gc-dashboard-theme-v1";
 	const LANG_KEY = "gc-dashboard-lang-v1";
+	const REFRESH_KEY = "gc-auto-refresh-v1";
 	const CACHE_PREFIX = "gc-cache:";
 	const CACHE_TTL_MS = 60_000;
 	// Las claves de caché más viejas que este umbral se purgan al arrancar (y
@@ -453,6 +462,9 @@
  	let sitesList = [];       // [{id, cname}] from /api/v0/sites
 	let allowedSiteIDs = null; // Set de site_id permitidos por el token ([−1] o ausente = todos)
 	let theme = localStorage.getItem(THEME_KEY) || "dark";
+	// Auto-actualización de los datos (issue #59): 0 = desactivada. Por defecto
+	// 60 s para que una pestaña quieta no se quede con datos de horas atrás.
+	let autoRefreshSec = readAutoRefreshPref();
 	let currentPreset = "30d";
 	let customStart = "", customEnd = "";
 	let lastUpdatedAt = null;
@@ -516,6 +528,28 @@
 		return LANG_NATIVE[lang] || lang;
 	}
 
+	function readAutoRefreshPref() {
+		const raw = parseInt(localStorage.getItem(REFRESH_KEY), 10);
+		if (raw === 0 || raw === 60 || raw === 300) return raw;
+		return 60;
+	}
+
+	function autoRefreshName() {
+		if (!autoRefreshSec) return t("refresh.off");
+		if (autoRefreshSec >= 300) return t("refresh.5m");
+		return t("refresh.1m");
+	}
+
+	function updateAutoRefreshUI() {
+		const lbl = $("#autorefresh-btn");
+		if (lbl) lbl.textContent = t("menu.autoRefresh", { opt: autoRefreshName() });
+		document.querySelectorAll("[data-refresh-option]").forEach((btn) => {
+			const active = parseInt(btn.dataset.refreshOption, 10) === autoRefreshSec;
+			btn.classList.toggle("active", active);
+			btn.setAttribute("aria-checked", String(active));
+		});
+	}
+
 	function applyTheme() {
 		const resolved = theme === "auto" ? resolveTheme() : theme;
 		document.documentElement.setAttribute("data-theme", resolved);
@@ -547,6 +581,7 @@
 		});
 		updateLangUI();
 		updateThemeUI();
+		updateAutoRefreshUI();
 		renderHomeControls();
 		updateRangeUI();
 		updateCompareUI();
@@ -608,7 +643,7 @@
 		}
 	}
 
-	const SUBMENU_TRIGGERS = ["#theme-btn", "#lang-btn", "#lang-toggle", "#export-btn"];
+	const SUBMENU_TRIGGERS = ["#theme-btn", "#lang-btn", "#lang-toggle", "#export-btn", "#autorefresh-btn"];
 
 	function renderUser() {
 		const chip = $("#user-chip");
@@ -2994,7 +3029,17 @@
 		} catch { /* cuota u otro: la caché es best-effort */ }
 	}
 
+	// Envoltorio: mismo guard de carga en curso que loadData.
 	async function loadHome(force = false) {
+		dataLoading = true;
+		try {
+			await loadHomeInner(force);
+		} finally {
+			dataLoading = false;
+		}
+	}
+
+	async function loadHomeInner(force = false) {
 		if (demoMode) { renderHomeDemo(); return; }
 		if (!client) return;
 		const token = { cancelled: false };
@@ -3262,6 +3307,7 @@
 		initHomeControls();
 		initSiteSettings();
 		initFooter();
+		syncAutoRefresh();
 		const ssBtn = $("#site-settings-btn");
 		if (ssBtn) ssBtn.hidden = demoMode;
 		if (demoMode) { showHome(); return; }
@@ -3275,6 +3321,8 @@
 	}
 
 	let refreshTick = 0;
+	let autoTimer = null;   // intervalo de auto-actualización de los datos (issue #59)
+	let dataLoading = false; // hay una carga (dashboard o home) en curso: no encolar otra
 
 	// Rate-limit visible: en vez de congelarse en silencio, banner con cuenta
 	// atrás y reintento automático (techo de 90 s aunque el servidor pida más).
@@ -3297,32 +3345,46 @@
 		}, 1000);
 	}
 
-	async function loadData() {
+	async function loadData(opts) {
+		// soft = refresco en caliente (auto-refresh): los datos se actualizan en
+		// su sitio sin skeletons ni colapsar lo expandido; force = saltarse el
+		// TTL de caché de TODOS los endpoints (sin vaciar la caché, que también
+		// sirve al precache y a otros sitios).
+		const soft = !!(opts && opts.soft);
+		const force = !!(opts && opts.force);
+		// El flag libera en la FASE CRÍTICA (justo tras pintar KPIs+gráfico+
+		// páginas): las tarjetas lazy de abajo esperan al scroll con un
+		// IntersectionObserver y la función no vuelve hasta entonces, así que
+		// esperar al final dejaría dataLoading pillado para siempre y el
+		// auto-refresh nunca saltaría.
+		dataLoading = true;
 		cancelledRef.current = true;
 		cancelledRef = { current: false };
 		const current = cancelledRef;
-		expandedPage = null;
-		highlightCode = null;
-		mapTransformState = null;
 		lastDatasets = {};
 		lastPrevTotalData = null;
 		lastPrevHitsData = null;
-		closeExpand();
 		progress = { fired: 0, done: 0 };
 		$("#error-banner").hidden = true;
-		$("#traffic-body").innerHTML = "";
-		$("#traffic-body").appendChild(skeletonCard(280));
-		$("#grid-kpis").innerHTML = "";
-		for (let i = 0; i < 6; i++) {
-			const s = document.createElement("div");
-			s.className = "kpi kpi-skel";
-			s.innerHTML = '<div class="skeleton sk-label"></div><div class="skeleton sk-value"></div>';
-			$("#grid-kpis").appendChild(s);
+		if (!soft) {
+			expandedPage = null;
+			highlightCode = null;
+			mapTransformState = null;
+			closeExpand();
+			$("#traffic-body").innerHTML = "";
+			$("#traffic-body").appendChild(skeletonCard(280));
+			$("#grid-kpis").innerHTML = "";
+			for (let i = 0; i < 6; i++) {
+				const s = document.createElement("div");
+				s.className = "kpi kpi-skel";
+				s.innerHTML = '<div class="skeleton sk-label"></div><div class="skeleton sk-value"></div>';
+				$("#grid-kpis").appendChild(s);
+			}
+			["pages-body", "languages-body", "referrers-body", "browsers-body", "systems-body", "sizes-body", "geo-map-body", "geo-list-body"].forEach((id) => {
+				$("#" + id).innerHTML = "";
+				$("#" + id).appendChild(skeletonCard(id === "geo-map-body" ? 280 : 200));
+			});
 		}
-		["pages-body", "languages-body", "referrers-body", "browsers-body", "systems-body", "sizes-body", "geo-map-body", "geo-list-body"].forEach((id) => {
-			$("#" + id).innerHTML = "";
-			$("#" + id).appendChild(skeletonCard(id === "geo-map-body" ? 280 : 200));
-		});
 		// Campañas: la pestaña solo existe si el sitio tiene campañas. Se oculta y
 		// se limpia en cada carga; si no, al pasar de un sitio con campañas a uno
 		// sin ellas la pestaña seguía visible con el skeleton ("cargando" eterno).
@@ -3388,7 +3450,7 @@
 			// tendencia/idiomas/referencias su grupo, y las tarjetas inferiores
 			// (donas/geo/campaigns) ya tienen la petición EN VUELO y su render
 			// lazy espera a esa promesa, que suele estar resuelta al scrollear.
-			const fire = (kind) => client.request(eps[kind], { cacheKey: ck(kind) })
+			const fire = (kind) => client.request(eps[kind], { cacheKey: ck(kind), forceRefresh: force })
 				.catch((e) => ({ __error: e }));
 			const pTotal = fire("total");
 			const pHits = fire("hits");
@@ -3417,6 +3479,10 @@
 			setTrafficData(data);
 			renderPages(data.hits.hits, data.hits.more);
 			lastUpdatedAt = Date.now();
+			// Fase crítica lista: el siguiente auto-refresh puede lanzarse aunque
+			// las tarjetas lazy de abajo sigan esperando al scroll.
+			dataLoading = false;
+			updateFreshness();
 
 			// Fase secundaria: tendencia (periodo anterior), idiomas y referencias.
 			const [prevRes, langRes, refRes] = await Promise.allSettled([pPrev, pLang, pRef]);
@@ -3503,6 +3569,7 @@
 			precacheSites();
 			updateFreshness();
 		} catch (e) {
+			dataLoading = false;
 			if (e.kind === "auth") return handleAuthError(e.message);
 			updateFreshness();
 		}
@@ -4037,6 +4104,38 @@
 		}
 	}
 
+	// ------------------------------------------------------- auto refresh (#59)
+	// Actualización periódica de TODO lo visible (home o dashboard activo). El
+	// tick se salta con la pestaña oculta o con una carga/rate-limit en curso;
+	// al volver a la pestaña se refresca de inmediato, así los datos nunca se
+	// quedan "de ayer" aunque no haya habido ni un clic.
+	function stopAutoRefresh() {
+		if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+	}
+
+	function syncAutoRefresh() {
+		stopAutoRefresh();
+		if (demoMode || !autoRefreshSec || $("#dash-screen").hidden) return;
+		autoTimer = setInterval(autoRefreshTick, autoRefreshSec * 1000);
+	}
+
+	function autoRefreshTick() {
+		if (document.hidden || dataLoading || rateTimer) return;
+		refreshTick++;
+		if (homeView) loadHome(true);
+		else loadData({ force: true, soft: true });
+	}
+
+	function setAutoRefresh(sec) {
+		autoRefreshSec = sec;
+		safeStore(REFRESH_KEY, String(sec));
+		updateAutoRefreshUI();
+		syncAutoRefresh();
+	}
+
+	// Handle para pruebas e integración (mismo patrón que GoatdashUpdate).
+	window.GoatdashAuto = { tick: autoRefreshTick, set: setAutoRefresh };
+
 	function setPreset(p) {
 		currentPreset = p;
 		if (p === "custom") {
@@ -4158,6 +4257,7 @@
 
 	function disconnect(msg) {
 		stopRealtime();
+		stopAutoRefresh();
 		if (client) client.clearCache();
 		localStorage.removeItem(STORAGE_KEY);
 		localStorage.removeItem(HOME_CACHE_KEY);
@@ -4265,6 +4365,24 @@
 			updateExportMenu();
 			toggleSubmenu("#export-menu", "#export-btn");
 		});
+		const autoBtn = $("#autorefresh-btn");
+		if (autoBtn) autoBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			toggleSubmenu("#autorefresh-menu", "#autorefresh-btn");
+		});
+		document.querySelectorAll("[data-refresh-option]").forEach((btn) => {
+			btn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				setAutoRefresh(parseInt(btn.dataset.refreshOption, 10) || 0);
+				closeSubmenus();
+				closeUserMenu();
+			});
+		});
+		// Al volver a la pestaña los datos pueden llevar horas quietos: refresco
+		// inmediato en vez de esperar al siguiente tick del intervalo.
+		document.addEventListener("visibilitychange", () => {
+			if (!document.hidden && autoTimer) autoRefreshTick();
+		});
 		document.querySelectorAll("[data-export]").forEach((btn) => {
 			btn.addEventListener("click", (e) => {
 				e.stopPropagation();
@@ -4335,7 +4453,7 @@
 			chip.setAttribute("aria-expanded", String(open));
 		});
 		document.addEventListener("click", (e) => {
-			if (!e.target.closest(".submenu") && !e.target.closest("#theme-btn") && !e.target.closest("#lang-btn") && !e.target.closest("#lang-toggle") && !e.target.closest("#export-btn")) {
+			if (!e.target.closest(".submenu") && !e.target.closest("#theme-btn") && !e.target.closest("#lang-btn") && !e.target.closest("#lang-toggle") && !e.target.closest("#export-btn") && !e.target.closest("#autorefresh-btn")) {
 				closeSubmenus();
 			}
 			const menu = $("#menu");
