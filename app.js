@@ -463,7 +463,8 @@
 	let allowedSiteIDs = null; // Set de site_id permitidos por el token ([−1] o ausente = todos)
 	let theme = localStorage.getItem(THEME_KEY) || "dark";
 	// Auto-actualización de los datos (issue #59): 0 = desactivada. Por defecto
-	// 60 s para que una pestaña quieta no se quede con datos de horas atrás.
+	// 5 min: un tick del home lanza ~3 peticiones por sitio, y con muchos sitios
+	// 60 s acaba en rate-limit del servidor.
 	let autoRefreshSec = readAutoRefreshPref();
 	let currentPreset = "30d";
 	let customStart = "", customEnd = "";
@@ -531,7 +532,7 @@
 	function readAutoRefreshPref() {
 		const raw = parseInt(localStorage.getItem(REFRESH_KEY), 10);
 		if (raw === 0 || raw === 60 || raw === 300) return raw;
-		return 60;
+		return 300;
 	}
 
 	function autoRefreshName() {
