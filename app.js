@@ -3212,9 +3212,16 @@
 		homeToken = token;
 
 		// Pintado inmediato desde la caché (si la hay): en una recarga se ven
-		// los datos al instante y el refresco llega en segundo plano.
+		// los datos al instante y el refresco llega en segundo plano. En un
+		// refresco (force) se conservan los datos ya mostrados: volver a
+		// poner "loading" aquí hacía que TODAS las tarjetas parpadearan con
+		// skeletons en cada auto-refresh.
 		const cached = force ? null : homeCacheRead();
 		homeData = homeSiteList().map((e) => {
+			const prev = homeData.find((h) => h.isAccount === e.isAccount && h.cname === e.cname);
+			if (force && prev && (prev.status === "ready" || prev.status === "error")) {
+				return { ...e, status: prev.status, visitors: prev.visitors, prev: prev.prev, series: prev.series, error: prev.error };
+			}
 			const c = cached && cached[homeCacheKeyFor(e)];
 			if (c) return { ...e, status: "ready", visitors: c.visitors, prev: c.prev, series: c.series, error: null };
 			return { ...e, status: "loading", visitors: null, prev: null, series: null, error: null };
