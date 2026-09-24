@@ -1,0 +1,13 @@
+[Unit]
+Description=GoatDash control endpoint (in-app update)
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/goatdash-ctl
+EnvironmentFile=/etc/goatdash-ctl.env
+Restart=on-failure
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

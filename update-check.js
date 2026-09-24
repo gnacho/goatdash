@@ -7,12 +7,19 @@
 	const REPO = "gnacho/goatdash";
 	const CHECK_KEY = "goatdash-last-update-check";
 	const DISMISS_KEY = "goatdash-update-dismissed";
+	const TOKEN_KEY = "goatdash-update-token";
+	const APPLY_ENDPOINT = "/__/goatdash-update";
 	const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 	const STRINGS = {
 		es: {
 			available: "Hay una versión nueva ({v}).",
 			notes: "Ver novedades",
+			apply: "Actualizar ahora",
+			applying: "Aplicando actualización…",
+			applyErr: "No se pudo aplicar la actualización.",
+			applyDone: "Actualización aplicada (v{v}). Recargando…",
+			applyNoToken: "Configura primero el token de actualización (menú de usuario).",
 			reload: "Hay una versión nueva desplegada. Recarga para usarla.",
 			reloadBtn: "Recargar",
 			close: "Cerrar"
@@ -20,6 +27,11 @@
 		en: {
 			available: "Version {v} is available.",
 			notes: "See release notes",
+			apply: "Update now",
+			applying: "Applying update…",
+			applyErr: "Could not apply the update.",
+			applyDone: "Update applied (v{v}). Reloading…",
+			applyNoToken: "Set the update token first (user menu).",
 			reload: "A new version is deployed. Reload to use it.",
 			reloadBtn: "Reload",
 			close: "Close"
@@ -68,11 +80,43 @@
 		return data.tag_name;
 	}
 
+	function getToken() {
+		try { return localStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; }
+	}
+
+	async function applyUpdate() {
+		const token = getToken();
+		if (!token) { showMessage(t("applyNoToken"), true); return { ok: false, error: "no token" }; }
+		const btn = document.getElementById("update-banner-apply");
+		if (btn) btn.disabled = true;
+		showMessage(t("applying"), false);
+		try {
+			const res = await fetch(APPLY_ENDPOINT, {
+				method: "POST",
+				headers: { "X-Update-Token": token },
+			});
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok || !data.ok) {
+				showMessage(t("applyErr"), true);
+				if (btn) btn.disabled = false;
+				return { ok: false, error: data.error || res.status };
+			}
+			showMessage(t("applyDone", data.version), false);
+			setTimeout(() => window.location.reload(), 1500);
+			return { ok: true, version: data.version };
+		} catch (e) {
+			showMessage(t("applyErr"), true);
+			if (btn) btn.disabled = false;
+			return { ok: false, error: e };
+		}
+	}
+
 	function showBanner(tag, reload) {
 		const banner = document.getElementById("update-banner");
 		const text = document.getElementById("update-banner-text");
 		const link = document.getElementById("update-banner-link");
 		const reloadBtn = document.getElementById("update-banner-reload");
+		const applyBtn = document.getElementById("update-banner-apply");
 		const closeBtn = document.getElementById("update-banner-close");
 		if (!banner || !text) return;
 
@@ -82,6 +126,7 @@
 			reloadBtn.hidden = false;
 			reloadBtn.textContent = t("reloadBtn");
 			reloadBtn.onclick = () => window.location.reload();
+			if (applyBtn) applyBtn.hidden = true;
 			closeBtn.hidden = true;
 		} else {
 			const version = tag.replace(/^v/, "");
@@ -90,6 +135,12 @@
 			link.textContent = t("notes");
 			link.hidden = false;
 			reloadBtn.hidden = true;
+			if (applyBtn) {
+				applyBtn.hidden = false;
+				applyBtn.disabled = false;
+				applyBtn.textContent = t("apply");
+				applyBtn.onclick = applyUpdate;
+			}
 			closeBtn.hidden = false;
 			closeBtn.setAttribute("aria-label", t("close"));
 			closeBtn.onclick = () => {
@@ -111,6 +162,8 @@
 		el.textContent = text;
 		if (link) link.hidden = true;
 		if (reloadBtn) reloadBtn.hidden = true;
+		const applyBtn = document.getElementById("update-banner-apply");
+		if (applyBtn) applyBtn.hidden = true;
 		if (closeBtn) closeBtn.hidden = false;
 		banner.hidden = false;
 		if (autoHide) {
@@ -157,7 +210,7 @@
 		if (available) showBanner(tag, false);
 	}
 
-	window.GoatdashUpdate = { check, showMessage };
+	window.GoatdashUpdate = { check, showMessage, apply: applyUpdate, setToken(v) { try { localStorage.setItem(TOKEN_KEY, v); } catch {} } };
 
 	if ("serviceWorker" in navigator) {
 		navigator.serviceWorker.addEventListener("message", (e) => {
