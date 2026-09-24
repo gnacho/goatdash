@@ -1794,6 +1794,34 @@
 		const topKey = currentLang() + "|" + String(total || 0) + "|" + (items || []).map((i) => formatName(i) + "=" + count(i)).join(",");
 		if (softTick && container._softKey === topKey) return;
 		container._softKey = topKey;
+
+		// Actualización en caliente con datos distintos: si el conjunto de
+		// filas coincide por nombre (la orden puede cambiar), se reutilizan:
+		// se reordenan con appendChild (mover no recrea ni reinicia nada) y se
+		// actualizan rango, barra, conteo (tween) y porcentaje en su sitio.
+		if (softTick && items && items.length) {
+			const listEl = container.querySelector(":scope > div");
+			const rowsByName = {};
+			if (listEl) [...listEl.children].forEach((r) => { if (r.dataset && r.dataset.name) rowsByName[r.dataset.name] = r; });
+			const wanted = items.map((i) => i.name);
+			const usable = listEl && wanted.every((nm) => rowsByName[nm]) && Object.keys(rowsByName).length === wanted.length;
+			if (usable) {
+				const tm = total || Math.max(...items.map((i) => i.count), 1);
+				items.forEach((item, idx) => {
+					const row = rowsByName[item.name];
+					listEl.appendChild(row);
+					if (rank) { const rankEl = row.querySelector(".list-rank"); if (rankEl) rankEl.textContent = idx + 1; }
+					const bar = row.querySelector(".list-bar");
+					if (bar) bar.style.width = ((count(item) / tm) * 100) + "%";
+					const cnt = row.querySelector(".list-count");
+					if (cnt) animateNum(cnt, count(item));
+					const pct = row.querySelector(".list-pct");
+					const share = total ? (count(item) / total) * 100 : null;
+					if (pct) pct.textContent = share !== null ? share.toFixed(1) + "%" : "";
+				});
+				return;
+			}
+		}
 		container.innerHTML = "";
 		if (!items || !items.length) { container.appendChild(emptyEl(t("no.data"))); return; }
 		const totalMax = total || Math.max(...items.map((i) => i.count), 1);
