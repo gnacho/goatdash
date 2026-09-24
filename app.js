@@ -407,7 +407,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "1.0.12";
+	const VERSION = "1.0.14";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const HOME_SORT_KEY = "gc-home-sort-v1";
@@ -1631,7 +1631,7 @@
 		// las etiquetas de ejes; overlay y tooltip leen el estado mutable
 		// chartAnimState.hover, que se actualiza aquí.
 		const prevState = chartAnimState;
-		if (prevState && prevState.n === n && prevState.body === body
+		if (prevState && prevState.n === n && prevState.body === body && prevState.svg.isConnected
 			&& !!prevState.prevPts === !!prevSeries
 			&& (!prevSeries || (prevState.prevPts && prevState.prevPts.length === prevPts.length))) {
 			if (prevState.cancel) prevState.cancel();
@@ -3573,6 +3573,8 @@
 			highlightCode = null;
 			mapTransformState = null;
 			closeExpand();
+			if (chartAnimState && chartAnimState.cancel) chartAnimState.cancel();
+			chartAnimState = null; // el SVG se va a vaciar: invalida el reuse
 			$("#traffic-body").innerHTML = "";
 			$("#traffic-body").appendChild(skeletonCard(280));
 			$("#grid-kpis").innerHTML = "";
