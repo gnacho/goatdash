@@ -55,6 +55,8 @@
 			"menu.settings": "Ajustes",
 			"menu.about": "Acerca de",
 			"menu.checkUpdates": "Comprobar actualizaciones",
+			"menu.updateToken": "Token de actualización",
+			"update.tokenPrompt": "Pega el token de actualización del servidor (vacío para borrarlo):",
 			"menu.autoRefresh": "Actualización automática: {opt}",
 			"refresh.off": "Desactivada",
 			"refresh.1m": "Cada minuto",
@@ -252,6 +254,8 @@
 			"menu.settings": "Settings",
 			"menu.about": "About",
 			"menu.checkUpdates": "Check for updates",
+			"menu.updateToken": "Update token",
+			"update.tokenPrompt": "Paste the server update token (empty to clear it):",
 			"menu.autoRefresh": "Auto-refresh: {opt}",
 			"refresh.off": "Off",
 			"refresh.1m": "Every minute",
@@ -407,7 +411,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "1.0.14";
+	const VERSION = "1.0.16";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const HOME_SORT_KEY = "gc-home-sort-v1";
@@ -4646,6 +4650,16 @@
 					upd.showMessage(t("update.upToDate", { v: r.current }), true);
 				},
 			});
+		});
+
+		$("#update-token-btn").addEventListener("click", () => {
+			closeUserMenu();
+			let cur = "";
+			try { cur = localStorage.getItem("goatdash-update-token") || ""; } catch {}
+			const v = window.prompt(t("update.tokenPrompt"), cur);
+			if (v === null) return;
+			const upd = window.GoatdashUpdate;
+			if (upd && typeof upd.setToken === "function") upd.setToken(v.trim());
 		});
 
 		// El menú de ajustes se despliega al pulsar el chip de usuario.
