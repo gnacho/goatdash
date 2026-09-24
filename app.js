@@ -407,7 +407,7 @@
 	// ------------------------------------------------------------------ state
 	const $ = (sel) => document.querySelector(sel);
 
-	const VERSION = "1.0.10";
+	const VERSION = "1.0.12";
 	const REPO_URL = "https://github.com/gnacho/goatdash";
 	const STORAGE_KEY = "gc-dashboard-config-v1";
 	const HOME_SORT_KEY = "gc-home-sort-v1";
@@ -488,6 +488,7 @@
 	let prevHitsPromise = null;   // fetch en vuelo de lastPrevHitsData
 	let realtimeTimer = null;     // intervalo de auto-refresco del preset realtime
 	let lastKPIArgs = null;   // [data, prevTotal, group] para re-pintar KPIs al cambiar métrica
+	let chartAnimState = null; // puntos del gráfico de tráfico ya dibujados (tween entre refrescos)
 	let homeView = false;     // true = la vista activa es el home de tarjetas
 	let homeData = [];        // [{site, isAccount, name, cname, status, visitors, prev, series}]
 	let homeQuery = "";       // filtro de búsqueda del home
@@ -1045,6 +1046,33 @@
 		if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
 		return String(Math.round(n));
 	}
+	// Tween genérico con rAF (easeOutCubic, cancelable). Devuelve el cancel.
+	function tween(dur, onFrame) {
+		const t0 = performance.now();
+		let raf = 0, dead = false;
+		const cancel = () => { dead = true; cancelAnimationFrame(raf); };
+		const step = (now) => {
+			if (dead) return;
+			const p = Math.min(1, (now - t0) / dur);
+			onFrame(1 - Math.pow(1 - p, 3));
+			if (p < 1) raf = requestAnimationFrame(step);
+		};
+		raf = requestAnimationFrame(step);
+		return cancel;
+	}
+	// Cuenta animada hacia el nuevo valor. Cada elemento lleva su tween y su
+	// último destino (_numLast): un refresh durante la animación arranca desde
+	// el destino anterior, no desde un frame intermedio.
+	function animateNum(el, to, dur = 600) {
+		const from = typeof el._numLast === "number" ? el._numLast : 0;
+		to = Number(to) || 0;
+		el._numLast = to;
+		if (el._numTween) el._numTween();
+		if (from === to) { el.textContent = fmtNum(to); return; }
+		el._numTween = tween(dur, (e) => {
+			el.textContent = fmtNum(Math.round(from + (to - from) * e));
+		});
+	}
 	function fmtPct(n) {
 		const v = n >= 0 ? "+" : "−";
 		return v + Math.abs(n).toFixed(1) + "%";
@@ -1428,7 +1456,6 @@
 	function renderKPIs(data, prevTotal, group) {
 		lastKPIArgs = [data, prevTotal, group];
 		const grid = $("#grid-kpis");
-		grid.innerHTML = "";
 		const totalNum = data.total.total ?? data.total.total_utc ?? 0;
 		const series = buildTrafficSeries(data.hits, group);
 		const pageviewSum = series.reduce((a, s) => a + s.count, 0);
@@ -1447,16 +1474,46 @@
 		const perVisit = totalNum > 0 ? (pageviewSum / totalNum).toFixed(1) : null;
 
 		const kpis = [
-			{ label: t("kpi.visitors"), value: fmtNum(totalNum), sub: `${trend !== null ? fmtPct(trend) + " " : ""}${t("kpi.vsPrev")} ${presetLabel(currentPreset)}`, trend, metric: "visitors" },
-			{ label: t("kpi.pageviews"), value: fmtNum(pageviewSum), sub: presetLabel(currentPreset) + (perVisit !== null ? ` · ${perVisit} ${t("kpi.perVisit")}` : ""), metric: "pageviews" },
+			{ label: t("kpi.visitors"), value: fmtNum(totalNum), num: totalNum, sub: `${trend !== null ? fmtPct(trend) + " " : ""}${t("kpi.vsPrev")} ${presetLabel(currentPreset)}`, trend, metric: "visitors" },
+			{ label: t("kpi.pageviews"), value: fmtNum(pageviewSum), num: pageviewSum, sub: presetLabel(currentPreset) + (perVisit !== null ? ` · ${perVisit} ${t("kpi.perVisit")}` : ""), metric: "pageviews" },
 			{ label: t("kpi.toppage"), value: top.name, string: true, sub: t("kpi.hits", { n: fmtNum(top.count) }) },
-			{ label: t("kpi.paths"), value: fmtNum((data.hits.hits || []).length), sub: t("kpi.distinct") },
-			{ label: t("kpi.events"), value: fmtNum(data.total.total_events ?? 0), sub: presetLabel(currentPreset) },
-			{ label: t("kpi.lastHour"), value: lastHourVisitors(data.total), sub: t("kpi.lastHourSub"), live: true },
+			{ label: t("kpi.paths"), value: fmtNum((data.hits.hits || []).length), num: (data.hits.hits || []).length, sub: t("kpi.distinct") },
+			{ label: t("kpi.events"), value: fmtNum(data.total.total_events ?? 0), num: data.total.total_events ?? 0, sub: presetLabel(currentPreset) },
+			{ label: t("kpi.lastHour"), value: lastHourVisitors(data.total), num: Number(lastHourVisitors(data.total)) || 0, sub: t("kpi.lastHourSub"), live: true },
 		];
+
+		// Refresco en caliente: si la estructura ya existe (mismos KPIs, mismas
+		// etiquetas), NO se reconstruye nada. Solo se actualizan los valores con
+		// cuenta animada y el texto del subtítulo; nombre, tarjeta y contenedor
+		// quedan intactos (evita el parpadeo del auto-refresh).
+		const kids = grid.children;
+		if (kids.length === kpis.length && [...kids].every((c, i) => c.dataset.label === kpis[i].label)) {
+			kpis.forEach((k, i) => {
+				const card = kids[i];
+				const val = card.querySelector(".kpi-value");
+				if (k.string) val.textContent = k.value;
+				else animateNum(val, k.num);
+				const sub = card.querySelector(".kpi-sub");
+				sub.textContent = "";
+				if (k.trend !== null && k.trend !== undefined && !k.string) {
+					const span = document.createElement("span");
+					span.className = k.trend >= 0 ? "trend-up" : "trend-down";
+					span.textContent = fmtPct(k.trend);
+					sub.appendChild(span);
+					sub.append(" " + k.sub.replace(/^[+−][\d.]+%\s*/, ""));
+				} else {
+					sub.textContent = k.sub;
+				}
+				if (k.metric) card.classList.toggle("kpi-active", chartMetric === k.metric);
+			});
+			return;
+		}
+
+		grid.innerHTML = "";
 		kpis.forEach((k) => {
 			const el = document.createElement("div");
 			el.className = "kpi";
+			el.dataset.label = k.label;
 			const label = document.createElement("div"); label.className = "kpi-label";
 			if (k.live) {
 				const dot = document.createElement("span");
@@ -1497,11 +1554,31 @@
 		});
 	}
 
+	function buildChartLegend() {
+		const legend = document.createElement("div");
+		legend.className = "chart-legend";
+		const mk = (cls, key) => {
+			const item = document.createElement("span");
+			item.className = "chart-legend-item";
+			const sw = document.createElement("span");
+			sw.className = "chart-legend-swatch " + cls;
+			item.append(sw, t(key));
+			return item;
+		};
+		legend.append(mk("sw-current", "chart.current"), mk("sw-previous", "chart.previous"));
+		return legend;
+	}
+
 	function renderTrafficChart(data, group) {
 		const body = $("#traffic-body");
-		body.innerHTML = "";
 		const series = metricSeries(data, group);
-		if (!series.length) { body.appendChild(emptyEl(t("chart.empty"))); return; }
+		if (!series.length) {
+			if (chartAnimState && chartAnimState.cancel) chartAnimState.cancel();
+			chartAnimState = null;
+			body.innerHTML = "";
+			body.appendChild(emptyEl(t("chart.empty")));
+			return;
+		}
 
 		// Comparativa con el periodo anterior (línea discontinua). Las series
 		// tienen el mismo span, así que se alinean por índice desde el final.
@@ -1523,6 +1600,64 @@
 		const y = (v) => PAD.top + ih - (v / max) * ih;
 
 		const ns = "http://www.w3.org/2000/svg";
+
+		// Reuso en caliente: con los mismos buckets y la misma comparativa NO
+		// se reconstruye el SVG. Se interpolan los paths (tween) y se refrescan
+		// las etiquetas de ejes; overlay y tooltip leen el estado mutable
+		// chartAnimState.hover, que se actualiza aquí.
+		const maxXTicks = 8;
+		const kTicks = Math.min(maxXTicks, n);
+		const spansYears = group === "month" && new Set(series.map((s) => s.ts.slice(0, 4))).size > 1;
+		const xTickIdx = new Set();
+		if (kTicks === 1) xTickIdx.add(0);
+		else for (let j = 0; j < kTicks; j++) xTickIdx.add(Math.round((j * (n - 1)) / (kTicks - 1)));
+
+		// Serie del periodo anterior (línea discontinua), en coordenadas del
+		// trazado actual. Se calcula antes del bloque de reutilización porque
+		// condiciona si el SVG previo sirve tal cual o hay que reconstruirlo.
+		const pts = series.map((s, i) => [x(i), y(s.count)]);
+		const prevPts = [];
+		if (prevSeries) {
+			for (let i = 0; i < n; i++) {
+				const pv = prevAt(i);
+				if (pv) prevPts.push([x(i), y(pv.count)]);
+			}
+			if (prevPts.length <= 1) prevPts.length = 0;
+		}
+
+		// Reuso en caliente: con los mismos buckets y la misma comparativa NO
+		// se reconstruye el SVG. Se interpolan los paths (tween) y se refrescan
+		// las etiquetas de ejes; overlay y tooltip leen el estado mutable
+		// chartAnimState.hover, que se actualiza aquí.
+		const prevState = chartAnimState;
+		if (prevState && prevState.n === n && prevState.body === body
+			&& !!prevState.prevPts === !!prevSeries
+			&& (!prevSeries || (prevState.prevPts && prevState.prevPts.length === prevPts.length))) {
+			if (prevState.cancel) prevState.cancel();
+			const from = prevState.pts;
+			const draw = (e) => {
+				const cur = pts.map((p, i) => [p[0], from[i][1] + (p[1] - from[i][1]) * e]);
+				prevState.line.setAttribute("d", "M" + cur.map((p) => p[0] + "," + p[1]).join(" L"));
+				prevState.area.setAttribute("d", "M" + cur[0][0] + "," + (PAD.top + ih) + " L" + cur.map((p) => p[0] + "," + p[1]).join(" L") + " L" + cur[cur.length - 1][0] + "," + (PAD.top + ih) + " Z");
+			};
+			prevState.cancel = tween(600, draw);
+			for (let i = 0; i <= 4; i++) prevState.yTicks[i].textContent = fmtNum(Math.round(max - (max / 4) * i));
+			const newXT = series.map((s, i) => xTickIdx.has(i) ? formatXTick(s.ts, group, { withYear: spansYears }) : null);
+			prevState.xTicks.forEach((tx, j) => { if (newXT[j] !== null) tx.textContent = newXT[j]; });
+			if (prevState.prevLine && prevPts.length) prevState.prevLine.setAttribute("d", "M" + prevPts.map((p) => p[0] + "," + p[1]).join(" L"));
+			prevState.hover.pts = pts;
+			prevState.hover.series = series;
+			prevState.hover.prevAt = prevAt;
+			prevState.hover.group = group;
+			body.querySelectorAll(".chart-legend").forEach((l) => l.remove());
+			if (prevSeries) body.appendChild(buildChartLegend());
+			prevState.pts = pts;
+			if (prevSeries) prevState.prevPts = prevPts;
+			return;
+		}
+
+		if (chartAnimState && chartAnimState.cancel) chartAnimState.cancel();
+		body.innerHTML = "";
 		const svg = document.createElementNS(ns, "svg");
 		svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
 		svg.setAttribute("preserveAspectRatio", "none");
@@ -1546,31 +1681,27 @@
 		svg.appendChild(defs);
 
 		// grid
-		const ticks = 4;
-		for (let i = 0; i <= ticks; i++) {
-			const gy = PAD.top + (ih / ticks) * i;
+		const yTicks = [];
+		for (let i = 0; i <= 4; i++) {
+			const gy = PAD.top + (ih / 4) * i;
 			const line = document.createElementNS(ns, "line");
 			line.setAttribute("x1", PAD.left); line.setAttribute("y1", gy);
 			line.setAttribute("x2", W - PAD.right); line.setAttribute("y2", gy);
 			line.setAttribute("stroke", "var(--chart-grid)");
 			line.setAttribute("stroke-dasharray", "3 4");
 			svg.appendChild(line);
-			const tv = Math.round(max - (max / ticks) * i);
+			const tv = Math.round(max - (max / 4) * i);
 			const txt = document.createElementNS(ns, "text");
 			txt.setAttribute("x", PAD.left - 8); txt.setAttribute("y", gy + 4);
 			txt.setAttribute("text-anchor", "end");
 			txt.setAttribute("font-size", "11");
 			txt.setAttribute("fill", "var(--text-muted)");
 			txt.textContent = fmtNum(tv);
+			yTicks.push(txt);
 			svg.appendChild(txt);
 		}
 
-		const maxXTicks = 8;
-		const kTicks = Math.min(maxXTicks, n);
-		const spansYears = group === "month" && new Set(series.map((s) => s.ts.slice(0, 4))).size > 1;
-		const xTickIdx = new Set();
-		if (kTicks === 1) xTickIdx.add(0);
-		else for (let j = 0; j < kTicks; j++) xTickIdx.add(Math.round((j * (n - 1)) / (kTicks - 1)));
+		const xTicks = [];
 		[...xTickIdx].sort((a, b) => a - b).forEach((i) => {
 			const isLast = i === n - 1 && n > 1;
 			const txt = document.createElementNS(ns, "text");
@@ -1581,11 +1712,11 @@
 			txt.setAttribute("fill", "var(--text-muted)");
 			txt.setAttribute("class", "x-tick");
 			txt.textContent = formatXTick(series[i].ts, group, { withYear: spansYears });
+			xTicks.push(txt);
 			svg.appendChild(txt);
 		});
 
 		// area
-		const pts = series.map((s, i) => [x(i), y(s.count)]);
 		const areaPath = "M" + pts[0][0] + "," + (PAD.top + ih) + " L" + pts.map((p) => p[0] + "," + p[1]).join(" L") + " L" + pts[pts.length - 1][0] + "," + (PAD.top + ih) + " Z";
 		const area = document.createElementNS(ns, "path");
 		area.setAttribute("d", areaPath);
@@ -1600,21 +1731,18 @@
 
 		// Serie del periodo anterior: línea discontinua tenue, alineada por el
 		// final del periodo (mismos buckets: día/hora/semana/mes equivalentes).
-		if (prevSeries) {
-			const prevPts = [];
-			for (let i = 0; i < series.length; i++) {
-				const pv = prevAt(i);
-				if (pv) prevPts.push([x(i), y(pv.count)]);
-			}
-			if (prevPts.length > 1) {
-				const prevPath = document.createElementNS(ns, "path");
-				prevPath.setAttribute("d", "M" + prevPts.map((p) => p[0] + "," + p[1]).join(" L"));
-				prevPath.setAttribute("class", "traffic-line-prev");
-				svg.appendChild(prevPath);
-			}
+		let prevLine = null;
+		if (prevPts.length) {
+			prevLine = document.createElementNS(ns, "path");
+			prevLine.setAttribute("d", "M" + prevPts.map((p) => p[0] + "," + p[1]).join(" L"));
+			prevLine.setAttribute("class", "traffic-line-prev");
+			svg.appendChild(prevLine);
 		}
 
-		// overlay + tooltip
+		// overlay + tooltip. El handler lee `hover` (estado mutable): en un
+		// refresco en caliente se actualizan sus campos y el tooltip muestra
+		// los datos nuevos sin reconstruir el overlay.
+		const hover = { pts, series, prevAt, group };
 		const overlay = document.createElementNS(ns, "rect");
 		overlay.setAttribute("x", PAD.left); overlay.setAttribute("y", PAD.top);
 		overlay.setAttribute("width", iw); overlay.setAttribute("height", ih);
@@ -1622,23 +1750,24 @@
 		svg.appendChild(overlay);
 
 		overlay.addEventListener("mousemove", (e) => {
+			const h = hover;
 			const rect = svg.getBoundingClientRect();
 			const mx = ((e.clientX - rect.left) / rect.width) * W;
 			let best = 0, bestD = Infinity;
-			pts.forEach((p, i) => {
+			h.pts.forEach((p, i) => {
 				const d = Math.abs(p[0] - mx);
 				if (d < bestD) { bestD = d; best = i; }
 			});
 			clearTooltips();
-			const s = series[best];
+			const s = h.series[best];
 			const dot = document.createElementNS(ns, "circle");
-			dot.setAttribute("cx", pts[best][0]); dot.setAttribute("cy", pts[best][1]);
+			dot.setAttribute("cx", h.pts[best][0]); dot.setAttribute("cy", h.pts[best][1]);
 			dot.setAttribute("r", "4");
 			dot.setAttribute("fill", "var(--chart-line)");
 			svg.appendChild(dot);
 			setTimeout(() => dot.remove(), 50);
-			let tipHtml = `<div class="tt-date">${formatTooltipDate(s.ts, group)}</div><span class="tt-num">${fmtNum(s.count)}</span> ${t(chartMetric === "pageviews" ? "kpi.pageviews" : "kpi.visitors")}`;
-			const pv = prevAt(best);
+			let tipHtml = `<div class="tt-date">${formatTooltipDate(s.ts, h.group)}</div><span class="tt-num">${fmtNum(s.count)}</span> ${t(chartMetric === "pageviews" ? "kpi.pageviews" : "kpi.visitors")}`;
+			const pv = h.prevAt(best);
 			if (pv) tipHtml += `<br><span class="tt-num">${fmtNum(pv.count)}</span> ${t("chart.previous")}`;
 			const tip = showTooltip(e.target, tipHtml);
 			tip.style.left = (e.clientX + 12) + "px";
@@ -1649,20 +1778,13 @@
 		body.appendChild(svg);
 
 		// Leyenda mínima actual vs anterior (solo con la comparativa activa).
-		if (prevSeries) {
-			const legend = document.createElement("div");
-			legend.className = "chart-legend";
-			const mk = (cls, key) => {
-				const item = document.createElement("span");
-				item.className = "chart-legend-item";
-				const sw = document.createElement("span");
-				sw.className = "chart-legend-swatch " + cls;
-				item.append(sw, t(key));
-				return item;
-			};
-			legend.append(mk("sw-current", "chart.current"), mk("sw-previous", "chart.previous"));
-			body.appendChild(legend);
-		}
+		if (prevSeries) body.appendChild(buildChartLegend());
+
+		chartAnimState = {
+			svg, n, body, pts, line, area, prevLine,
+			prevPts: prevPts.length ? prevPts : null,
+			yTicks, xTicks, hover, cancel: null,
+		};
 	}
 
 	function renderTopList(container, items, { rank = true, formatName = (i) => i.name, nameSub = () => null, count = (i) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "", badge = () => null, isSelected = () => false, rowTitle = null } = {}) {
@@ -3111,11 +3233,52 @@
 			const bv = b.status === "ready" ? b.visitors : -1;
 			return dir * (av - bv) || a.name.toLowerCase().localeCompare(b.name.toLowerCase());
 		});
-		grid.innerHTML = "";
-		if (!items.length) { grid.appendChild(emptyEl(t("home.noResults"))); return; }
-		const frag = document.createDocumentFragment();
-		items.forEach((e) => frag.appendChild(homeCardEl(e)));
-		grid.appendChild(frag);
+		if (!items.length) {
+			[...grid.children].forEach((c) => c.remove());
+			grid.appendChild(emptyEl(t("home.noResults")));
+			return;
+		}
+		// Refresco en caliente: se reutilizan las tarjetas existentes (cabecera
+		// con icono/nombre/URL intactos) y solo se anima el número, la tendencia
+		// y el sparkline. Mover un nodo ya existente no reinicia sus animaciones.
+		const prev = {};
+		[...grid.children].forEach((c) => { prev[c.dataset.site ?? ""] = c; });
+		const els = items.map((e) => updateHomeCard(prev[e.cname || ""] || null, e));
+		els.forEach((el) => grid.appendChild(el));
+		[...grid.children].forEach((c) => { if (!els.includes(c)) c.remove(); });
+	}
+
+	function updateHomeCard(old, e) {
+		if (old && e.status === "ready"
+			&& !old.classList.contains("home-card-loading")
+			&& !old.classList.contains("home-card-error")) {
+			const numEl = old.querySelector(".home-num");
+			if (numEl) animateNum(numEl, e.visitors);
+			const trendRow = old.querySelector(".home-trend");
+			if (trendRow) trendRow.replaceWith(homeTrendEl(e));
+			const spark = old.querySelector("svg.spark");
+			if (spark) spark.replaceWith(sparklineSVG(e.series));
+			return old;
+		}
+		if (old) old.remove();
+		return homeCardEl(e);
+	}
+
+	function homeTrendEl(e) {
+		const trendRow = document.createElement("span");
+		trendRow.className = "home-trend";
+		let trend = null;
+		if (e.prev === 0 && e.visitors > 0) trend = 100;
+		else if (e.prev > 0) trend = ((e.visitors - e.prev) / e.prev) * 100;
+		if (trend !== null && isFinite(trend)) {
+			const span = document.createElement("span");
+			span.className = trend >= 0 ? "trend-up" : "trend-down";
+			span.textContent = fmtPct(trend);
+			trendRow.append(span, " " + t("home.vsPrev"));
+		} else {
+			trendRow.textContent = "—";
+		}
+		return trendRow;
 	}
 
 	function homeCardEl(e) {
@@ -3179,20 +3342,7 @@
 		const cap = document.createElement("span");
 		cap.className = "home-cap";
 		cap.textContent = t("home.visitors24");
-		const trendRow = document.createElement("span");
-		trendRow.className = "home-trend";
-		let trend = null;
-		if (e.prev === 0 && e.visitors > 0) trend = 100;
-		else if (e.prev > 0) trend = ((e.visitors - e.prev) / e.prev) * 100;
-		if (trend !== null && isFinite(trend)) {
-			const span = document.createElement("span");
-			span.className = trend >= 0 ? "trend-up" : "trend-down";
-			span.textContent = fmtPct(trend);
-			trendRow.append(span, " " + t("home.vsPrev"));
-		} else {
-			trendRow.textContent = "—";
-		}
-		body.append(num, cap, sparklineSVG(e.series), trendRow);
+		body.append(num, cap, sparklineSVG(e.series), homeTrendEl(e));
 		card.append(head, body);
 		if (!demoMode) {
 			card.addEventListener("click", () => onSiteChange(e.isAccount ? null : e.cname));
@@ -3422,6 +3572,7 @@
 			renderGeoDemo(data);
 			if (data.campaigns.stats.length) { $("#campaigns-tab").hidden = false; renderCampaignsDemo(data.campaigns.stats); }
 			updateFreshness();
+			dataLoading = false;
 			return;
 		}
 
