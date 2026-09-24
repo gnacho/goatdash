@@ -489,6 +489,7 @@
 	let realtimeTimer = null;     // intervalo de auto-refresco del preset realtime
 	let lastKPIArgs = null;   // [data, prevTotal, group] para re-pintar KPIs al cambiar métrica
 	let chartAnimState = null; // puntos del gráfico de tráfico ya dibujados (tween entre refrescos)
+	let softTick = false;      // true mientras dura un refresco en caliente (auto-refresh soft)
 	let homeView = false;     // true = la vista activa es el home de tarjetas
 	let homeData = [];        // [{site, isAccount, name, cname, status, visitors, prev, series}]
 	let homeQuery = "";       // filtro de búsqueda del home
@@ -1788,6 +1789,11 @@
 	}
 
 	function renderTopList(container, items, { rank = true, formatName = (i) => i.name, nameSub = () => null, count = (i) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "", badge = () => null, isSelected = () => false, rowTitle = null } = {}) {
+		// En refresco en caliente con los mismos datos (mismo idioma, items y
+		// conteos) no se toca el DOM: evita el parpadeo de la lista.
+		const topKey = currentLang() + "|" + String(total || 0) + "|" + (items || []).map((i) => formatName(i) + "=" + count(i)).join(",");
+		if (softTick && container._softKey === topKey) return;
+		container._softKey = topKey;
 		container.innerHTML = "";
 		if (!items || !items.length) { container.appendChild(emptyEl(t("no.data"))); return; }
 		const totalMax = total || Math.max(...items.map((i) => i.count), 1);
@@ -1882,6 +1888,9 @@
 	}
 
 	function renderDonut(container, items, { total, page, onDrill, iconFor = null, collapse = true }) {
+		const donutKey = currentLang() + "|" + String(total || 0) + "|" + (items || []).map((i) => i.name + "=" + i.count).join(",");
+		if (softTick && container._softKey === donutKey) return;
+		container._softKey = donutKey;
 		container.innerHTML = "";
 		const totalCount = total || (items || []).reduce((a, i) => a + (i.count || 0), 0);
 		if (!items || !items.length || totalCount <= 0) { container.appendChild(emptyEl(t("no.data"))); return; }
@@ -2229,6 +2238,9 @@
 	}
 
 	function renderGeo(mapContainer, listContainer, stats, total, clientOrDemo) {
+		const geoKey = currentLang() + "|" + String(total || 0) + "|" + (stats || []).map((s) => (s.name || "") + "=" + (s.count ?? s.count_unique ?? 0)).join(",");
+		if (softTick && mapContainer._softKey === geoKey) return;
+		mapContainer._softKey = geoKey;
 		mapContainer.innerHTML = "";
 		listContainer.innerHTML = "";
 		lastDatasets.geo = { items: stats || [], total };
@@ -2367,6 +2379,9 @@
 	}
 
 	function renderReferrersInto(body, stats, demoDetails, { full = false } = {}) {
+		const refKey = currentLang() + "|" + (stats || []).map((s) => (s.ref_scheme || "o") + (s.name || "") + "=" + s.count).join(",");
+		if (softTick && body._softKey === refKey) return;
+		body._softKey = refKey;
 		body.innerHTML = "";
 		lastDatasets.referrers = { items: stats || [], total: (stats || []).reduce((a, s) => a + s.count, 0) };
 		if (!stats || !stats.length) { body.appendChild(refEmptyEl()); return; }
@@ -3503,6 +3518,7 @@
 		// sirve al precache y a otros sitios).
 		const soft = !!(opts && opts.soft);
 		const force = !!(opts && opts.force);
+		softTick = soft;
 		// El flag libera en la FASE CRÍTICA (justo tras pintar KPIs+gráfico+
 		// páginas): las tarjetas lazy de abajo esperan al scroll con un
 		// IntersectionObserver y la función no vuelve hasta entonces, así que
@@ -3541,7 +3557,7 @@
 		// sin ellas la pestaña seguía visible con el skeleton ("cargando" eterno).
 		const campsTab = $("#campaigns-tab");
 		const campsBody = $("#campaigns-body");
-		if (campsBody) campsBody.innerHTML = "";
+		if (!soft && campsBody) campsBody.innerHTML = "";
 		if (campsTab) {
 			const campsPanel = document.querySelector('#content-card [data-panel="campaigns"]');
 			if (!campsTab.hidden && campsPanel && !campsPanel.hidden) activatePanelTab("content-card", "pages");
@@ -3586,7 +3602,7 @@
 			// y la red los refresca en las fases siguientes. Recarga = 0 ms.
 			const staleTotal = client._readCache(eps.total, undefined, true, ck("total"));
 			const staleHits = client._readCache(eps.hits, undefined, true, ck("hits"));
-			if (staleTotal !== null) {
+			if (!soft && staleTotal !== null) {
 				const stalePrev = client._readCache(eps.prev, undefined, true, ck("prev"));
 				if (stalePrev) lastPrevTotalData = stalePrev;
 				renderKPIs({ total: staleTotal, hits: staleHits || { hits: [] } },
