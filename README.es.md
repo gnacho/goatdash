@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://stats.cloudless.club"><img alt="Demo en vivo" src="https://img.shields.io/badge/live%20demo-stats.cloudless.club-2b5884"></a>
   <a href="LICENSE"><img alt="Licencia: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
-  <img alt="Sin build" src="https://img.shields.io/badge/build-ninguno-5a5a5a">
+  <img alt="Build: esbuild" src="https://img.shields.io/badge/build-esbuild-5a5a5a">
   <img alt="Dependencias" src="https://img.shields.io/badge/dependencias-0-2b5884">
 </p>
 
@@ -25,7 +25,7 @@
   </picture>
 </p>
 
-goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador como JavaScript plano: sin framework, sin CDN, sin paso de build, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Empezó como un rewrite de [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) y creció hasta ser un dashboard multi-sitio que lee varios sitios de GoatCounter, cada uno servido en su propio dominio.
+goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador como JavaScript plano: sin framework, sin CDN, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Las fuentes son TypeScript en `src/`, compiladas con esbuild a los mismos ficheros planos que se sirven. Empezó como un rewrite de [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) y creció hasta ser un dashboard multi-sitio que lee varios sitios de GoatCounter, cada uno servido en su propio dominio.
 
 ## ¿Por qué existe esto?
 
@@ -115,7 +115,7 @@ server {
 }
 ```
 
-Requisitos: cualquier servidor web estático y una instancia de GoatCounter cuya API v0 sea accesible por HTTPS desde el navegador. Sin Docker, sin Node, sin herramientas de build.
+Requisitos: cualquier servidor web estático y una instancia de GoatCounter cuya API v0 sea accesible por HTTPS desde el navegador. Sin Docker, sin Node y sin herramientas de build en el servidor: el tarball del release contiene ficheros estáticos planos.
 
 ### Cache busting
 
@@ -166,7 +166,7 @@ Pulsa casi cualquier cosa para hacer drill: una página muestra sus referrers, u
 
 ## Desarrollo
 
-goatdash es HTML, CSS y JavaScript planos, repartidos entre `index.html`, `styles.css`, `theme.js`, `app.js`, `fixtures.js` y `sw.js`. Sin package.json, sin bundler, sin harness de tests en el repo; los datos de demo viven en `fixtures.js` y reflejan la forma real de las respuestas de la API.
+goatdash sirve HTML, CSS y JavaScript planos: `index.html` y `styles.css` más los ficheros compilados `app.js`, `theme.js`, `fixtures.js`, `sw.js` y `update-check.js`. Las fuentes viven en `src/*.ts` y se compilan con esbuild (`npm run build`), que conserva los nombres históricos para que la query de cache-bust, el service worker y el updater del servidor sigan funcionando sin cambios. `npm run typecheck` ejecuta `tsc --noEmit` en modo estricto. Los datos de demo viven en `src/fixtures.ts` y reflejan la forma real de las respuestas de la API.
 
 ```sh
 # Sirve el repo y abre http://localhost:8000

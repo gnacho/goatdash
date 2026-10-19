@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://stats.cloudless.club"><img alt="Live demo" src="https://img.shields.io/badge/live%20demo-stats.cloudless.club-2b5884"></a>
   <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
-  <img alt="No build step" src="https://img.shields.io/badge/build-none-5a5a5a">
+  <img alt="Build: esbuild" src="https://img.shields.io/badge/build-esbuild-5a5a5a">
   <img alt="Bundle" src="https://img.shields.io/badge/dependencies-0-2b5884">
 </p>
 
@@ -25,7 +25,7 @@
   </picture>
 </p>
 
-goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcounter.com/) analytics. It runs entirely in the browser as plain JavaScript: no framework, no CDN, no build step, just a few static files that talk to the GoatCounter v0 API. It started as a rewrite of [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) and grew into a multi-site dashboard that reads several GoatCounter sites, each served at its own domain.
+goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcounter.com/) analytics. It runs entirely in the browser as plain JavaScript: no framework, no CDN, just a few static files that talk to the GoatCounter v0 API. The sources are TypeScript under `src/`, compiled with esbuild to the same plain files that get shipped. It started as a rewrite of [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) and grew into a multi-site dashboard that reads several GoatCounter sites, each served at its own domain.
 
 ## Why does this exist?
 
@@ -35,7 +35,7 @@ Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it 
 
 ## Why this stack?
 
-- **Vanilla JS, no framework, no CDN**: the original loaded React, Recharts and Babel from unpkg. For a page that reads one JSON API and draws a few charts, that is weight it does not need. Seven static files, nothing to build, nothing to break when a CDN bumps a version.
+- **Vanilla JS, no framework, no CDN**: the original loaded React, Recharts and Babel from unpkg. For a page that reads one JSON API and draws a few charts, that is weight it does not need. A handful of static files produced by a 20 ms esbuild pass, nothing to break when a CDN bumps a version.
 - **No backend of my own**: goatdash speaks the GoatCounter API directly from the browser. There is no server to patch, no database to back up, no service to keep alive. Deployment is copying files.
 - **GoatCounter as the backend**: a single lightweight binary with SQLite, privacy-first by design and trivial to self-host. The v0 API already exposes everything the dashboard shows: totals, pages, referrers, browsers, systems, sizes, locations, languages and campaigns.
 - **No backend patch for multi-site**: GoatCounter resolves the site from the Host header, so each site lives at its own domain and the dashboard queries it there. One domain per site, all pointing at the same GoatCounter. The official binary does everything.
@@ -118,7 +118,7 @@ server {
 }
 ```
 
-Requirements: any static web server and a GoatCounter instance whose v0 API is reachable over HTTPS from the browser. No Docker, no Node, no build tools.
+Requirements: any static web server and a GoatCounter instance whose v0 API is reachable over HTTPS from the browser. No Docker, no Node and no build tools on the server: the release tarball contains plain static files.
 
 ### Cache busting
 
@@ -167,7 +167,7 @@ Click almost anything to drill down: a page shows its referrers, a referrer show
 
 ## Development
 
-goatdash is plain HTML, CSS and JavaScript, split across `index.html`, `styles.css`, `theme.js`, `app.js`, `fixtures.js` and `sw.js`. No package.json, no bundler, no test harness in the repo; the demo data lives in `fixtures.js` and mirrors the real API response shape.
+goatdash ships plain HTML, CSS and JavaScript: `index.html` and `styles.css` plus the built `app.js`, `theme.js`, `fixtures.js`, `sw.js` and `update-check.js`. The sources live in `src/*.ts` and are compiled with esbuild (`npm run build`), which keeps the historical filenames so the cache-bust query, the service worker and the server-side updater work unchanged. `npm run typecheck` runs `tsc --noEmit` in strict mode. The demo data lives in `src/fixtures.ts` and mirrors the real API response shape.
 
 ```sh
 # Serve the repo and open http://localhost:8000
