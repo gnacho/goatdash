@@ -25,17 +25,17 @@
   </picture>
 </p>
 
-goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcounter.com/) analytics. It runs entirely in the browser as plain JavaScript: no framework, no CDN, just a few static files that talk to the GoatCounter v0 API. The sources are TypeScript under `src/`, compiled with Vite to the same plain files that get shipped. It started as a rewrite of [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) and grew into a multi-site dashboard that reads several GoatCounter sites, each served at its own domain.
+goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcounter.com/) analytics. It runs entirely in the browser: no framework, no CDN, just a few static files that talk to the GoatCounter v0 API. The sources are TypeScript under `src/`, compiled with Vite to the same plain files that get shipped. It started as a rewrite of [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) and grew into a multi-site dashboard that reads several GoatCounter sites, each served at its own domain.
 
 ## Why does this exist?
 
 I run a small set of self-hosted open source projects, each with its own landing page (cloudless.club and five apps: deltos, easyzfs, keynest, netpulse, helios). I wanted analytics to match that setup: self-hosted, light, no cloud account, in the same visual style as the landings. GoatCounter was the obvious backend, one small binary with SQLite and a v0 API that covers everything. The missing piece was the frontend.
 
-Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it loaded React, Recharts and Babel from a CDN. For a page that just reads a JSON API that felt heavy, so I rewrote it in vanilla JS with my own tokens, added ES/EN and a demo mode, and later the part that started all this: multi-site. GoatCounter resolves the site from the Host header, which is core behavior, so each of my sites lives at its own domain and the dashboard queries them directly, cross-origin. The official binary does all of it. I also proposed an `X-Goatcounter-Site` header upstream in [PR #915](https://github.com/arp242/goatcounter/pull/915) as a future option for single-origin setups, but goatdash does not need it. It has been tracking the whole hub since August 2026.
+Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it loaded React, Recharts and Babel from a CDN. For a page that just reads a JSON API that felt heavy, so I rewrote it from scratch with my own tokens, added ES/EN and a demo mode, and later the part that started all this: multi-site. GoatCounter resolves the site from the Host header, which is core behavior, so each of my sites lives at its own domain and the dashboard queries them directly, cross-origin. The official binary does all of it. I also proposed an `X-Goatcounter-Site` header upstream in [PR #915](https://github.com/arp242/goatcounter/pull/915) as a future option for single-origin setups, but goatdash does not need it. It has been tracking the whole hub since August 2026.
 
 ## Why this stack?
 
-- **Vanilla JS, no framework, no CDN**: the original loaded React, Recharts and Babel from unpkg. For a page that reads one JSON API and draws a few charts, that is weight it does not need. A handful of static files produced by a Vite pass at build time, nothing to break when a CDN bumps a version.
+- **No framework, no CDN**: the original loaded React, Recharts and Babel from unpkg. For a page that reads one JSON API and draws a few charts, that is weight it does not need. Plain TypeScript in `src/` compiled by Vite into a handful of static files: nothing to break when a CDN bumps a version.
 - **No backend of my own**: goatdash speaks the GoatCounter API directly from the browser. There is no server to patch, no database to back up, no service to keep alive. Deployment is copying files.
 - **GoatCounter as the backend**: a single lightweight binary with SQLite, privacy-first by design and trivial to self-host. The v0 API already exposes everything the dashboard shows: totals, pages, referrers, browsers, systems, sizes, locations, languages and campaigns.
 - **No backend patch for multi-site**: GoatCounter resolves the site from the Host header, so each site lives at its own domain and the dashboard queries it there. One domain per site, all pointing at the same GoatCounter. The official binary does everything.
@@ -95,7 +95,7 @@ This is a personal project that I use every day, not a product. It is AGPL-3.0, 
 
 ## Installation
 
-There is no install script and nothing to compile: goatdash is a handful of static files. Put them on any static host and open the page.
+There is no install script and nothing to compile on the server: the release tarball is a handful of ready-to-serve static files. Put them on any static host and open the page.
 
 ```sh
 # Try it locally
@@ -167,7 +167,7 @@ Click almost anything to drill down: a page shows its referrers, a referrer show
 
 ## Development
 
-goatdash ships plain HTML, CSS and JavaScript: `index.html` and `styles.css` plus a handful of files compiled from the TypeScript sources in `src/`. The build (`npm run build`, Vite) keeps the historical filenames so the cache-bust query, the service worker and the server-side updater work unchanged; the compiled files are not committed. `npm run typecheck` runs `tsc --noEmit` in strict mode. Layout: the shared core (types, state, api, settings, i18n, utils) at the top level, `src/render/` (panels and chart), `src/bridge/` (entry points shared by several views) and the views themselves (`home`, `sites`, `params`, `dashboard`, ...). `src/main.ts` imports the whole graph and calls `boot()`. The demo data lives in `src/fixtures.ts` and mirrors the real API response shape.
+goatdash ships `index.html`, `styles.css` and a handful of JavaScript files compiled from the TypeScript sources in `src/`. The build (`npm run build`, Vite) keeps the historical filenames so the cache-bust query, the service worker and the server-side updater work unchanged; the compiled files are not committed. `npm run typecheck` runs `tsc --noEmit` in strict mode. Layout: the shared core (types, state, api, settings, i18n, utils) at the top level, `src/render/` (panels and chart), `src/bridge/` (entry points shared by several views) and the views themselves (`home`, `sites`, `params`, `dashboard`, ...). `src/main.ts` imports the whole graph and calls `boot()`. The demo data lives in `src/fixtures.ts` and mirrors the real API response shape.
 
 ```sh
 npm install          # dev dependencies (TypeScript and Vite)
@@ -183,7 +183,7 @@ The world map data in `assets/world-map.js` is a generated asset kept from the o
 
 ## Thanks
 
-goatdash would not look the way it does without [Abhishekh Singh's goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT): the layout, the drill-down pattern and the demo mode idea all come from there. The world map asset (`assets/world-map.js`) is kept verbatim from that project. The rest is a clean vanilla rewrite, but the reference deserves the credit.
+goatdash would not look the way it does without [Abhishekh Singh's goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT): the layout, the drill-down pattern and the demo mode idea all come from there. The world map asset (`assets/world-map.js`) is kept verbatim from that project. The rest is a clean rewrite, but the reference deserves the credit.
 
 ## License
 
