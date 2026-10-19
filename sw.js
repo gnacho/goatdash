@@ -1,7 +1,7 @@
 "use strict";
 (() => {
   const swSelf = self;
-  const CACHE = "goatdash-v37";
+  const CACHE = "goatdash-v38";
   const SHELL = ["/", "/index.html", "/styles.css", "/theme.js", "/app.js", "/fixtures.js", "/update-check.js", "/version.json", "/assets/world-map.js"];
   self.addEventListener("install", ((e) => {
     e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => swSelf.skipWaiting()));

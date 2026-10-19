@@ -403,7 +403,7 @@
       }
     };
     const $ = (sel) => document.querySelector(sel);
-    const VERSION = "1.0.16";
+    const VERSION = "1.0.18";
     const REPO_URL = "https://github.com/gnacho/goatdash";
     const STORAGE_KEY = "gc-dashboard-config-v1";
     const HOME_SORT_KEY = "gc-home-sort-v1";
