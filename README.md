@@ -25,13 +25,7 @@
   </picture>
 </p>
 
-goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcounter.com/) analytics. It runs entirely in the browser: no framework, no CDN, just a few static files that talk to the GoatCounter v0 API. The sources are TypeScript under `src/`, compiled with Vite to the same plain files that get shipped. It started as a rewrite of [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) and grew into a multi-site dashboard that reads several GoatCounter sites, each served at its own domain.
-
-## Why does this exist?
-
-I run a small set of self-hosted open source projects, each with its own landing page (cloudless.club and five apps: deltos, easyzfs, keynest, netpulse, helios). I wanted analytics to match that setup: self-hosted, light, no cloud account, in the same visual style as the landings. GoatCounter was the obvious backend, one small binary with SQLite and a v0 API that covers everything. The missing piece was the frontend.
-
-Abhishekh Singh's goatcounter-dashboard had exactly the layout I wanted, but it loaded React, Recharts and Babel from a CDN. For a page that just reads a JSON API that felt heavy, so I rewrote it from scratch with my own tokens, added ES/EN and a demo mode, and later the part that started all this: multi-site. GoatCounter resolves the site from the Host header, which is core behavior, so each of my sites lives at its own domain and the dashboard queries them directly, cross-origin. The official binary does all of it. I also proposed an `X-Goatcounter-Site` header upstream in [PR #915](https://github.com/arp242/goatcounter/pull/915) as a future option for single-origin setups, but goatdash does not need it. It has been tracking the whole hub since August 2026.
+goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcounter.com/) analytics. It runs entirely in the browser: no framework, no CDN, just a few static files that talk to the GoatCounter v0 API. The sources are TypeScript under `src/`, compiled with Vite to the same plain files that get shipped.
 
 ## Why this stack?
 

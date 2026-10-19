@@ -25,13 +25,7 @@
   </picture>
 </p>
 
-goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador: sin framework, sin CDN, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Las fuentes son TypeScript en `src/`, compiladas con Vite a los mismos ficheros planos que se sirven. Empezó como un rewrite de [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) y creció hasta ser un dashboard multi-sitio que lee varios sitios de GoatCounter, cada uno servido en su propio dominio.
-
-## ¿Por qué existe esto?
-
-Mantengo un puñado de proyectos open source autohospedados, cada uno con su landing (cloudless.club y cinco apps: deltos, easyzfs, keynest, netpulse, helios). Quería analítica a juego con ese montaje: en casa, ligera, sin cuenta en la nube y con el mismo estilo visual que las landings. GoatCounter era el backend evidente, un binario pequeño con SQLite y una API v0 que cubre todo. Lo que faltaba era el frontend.
-
-El goatcounter-dashboard de Abhishekh Singh tenía exactamente el layout que quería, pero cargaba React, Recharts y Babel desde un CDN. Para una página que solo lee una API JSON me pareció un peso innecesario, así que lo reescribí desde cero con mis propios tokens, le añadí ES/EN y un modo demo, y después vino la parte que originó todo esto: el multi-sitio. GoatCounter resuelve el sitio con el header Host, que es su mecanismo core, así que cada uno de mis sitios vive en su propio dominio y el dashboard los consulta directamente, cross-origin. El binario oficial lo hace todo. También propuse aguas arriba un header `X-Goatcounter-Site` en el [PR #915](https://github.com/arp242/goatcounter/pull/915) como opción futura para setups single-origin, pero goatdash no lo necesita. Desde agosto de 2026 está midiendo todo el hub.
+goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador: sin framework, sin CDN, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Las fuentes son TypeScript en `src/`, compiladas con Vite a los mismos ficheros planos que se sirven.
 
 ## ¿Por qué este stack?
 
