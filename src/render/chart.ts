@@ -5,7 +5,7 @@ import { Kpi } from "../types";
 import { $ } from "../dom";
 import { safeStore } from "../settings";
 import { t } from "../i18n/index";
-import { animateNum, fmtNum, fmtPct, tween } from "../util";
+import { animateNum, fmtNum, fmtPct, monotoneArea, monotoneLine, tween } from "../util";
 import { formatTooltipDate, formatXTick, lastHourVisitors, presetLabel } from "../datetime";
 import { buildTotalSeries, buildTrafficSeries, effectiveGroup, metricSeries } from "../series";
 import { clearTooltips, emptyEl, showTooltip } from "./cards";
@@ -212,7 +212,7 @@ function renderTrafficChart(data: any, group: any) {
 	// Serie del periodo anterior (línea discontinua), en coordenadas del
 	// trazado actual. Se calcula antes del bloque de reutilización porque
 	// condiciona si el SVG previo sirve tal cual o hay que reconstruirlo.
-	const pts = series.map((s, i) => [x(i), y(s.count)]);
+	const pts: [number, number][] = series.map((s, i) => [x(i), y(s.count)]);
 	const prevPts: [number, number][] = [];
 	if (prevSeries) {
 		for (let i = 0; i < n; i++) {
@@ -233,15 +233,15 @@ function renderTrafficChart(data: any, group: any) {
 		if (prevState.cancel) prevState.cancel();
 		const from = prevState.pts;
 		const draw = (e: any) => {
-			const cur = pts.map((p, i) => [p[0], from[i][1] + (p[1] - from[i][1]) * e]);
-			prevState.line.setAttribute("d", "M" + cur.map((p) => p[0] + "," + p[1]).join(" L"));
-			prevState.area.setAttribute("d", "M" + cur[0][0] + "," + (PAD.top + ih) + " L" + cur.map((p) => p[0] + "," + p[1]).join(" L") + " L" + cur[cur.length - 1][0] + "," + (PAD.top + ih) + " Z");
+			const cur: [number, number][] = pts.map((p, i) => [p[0], from[i][1] + (p[1] - from[i][1]) * e]);
+			prevState.line.setAttribute("d", monotoneLine(cur));
+			prevState.area.setAttribute("d", monotoneArea(cur, PAD.top + ih));
 		};
 		prevState.cancel = tween(600, draw);
 		for (let i = 0; i <= 4; i++) prevState.yTicks[i].textContent = fmtNum(Math.round(max - (max / 4) * i));
 		const newXT = series.map((s, i) => xTickIdx.has(i) ? formatXTick(s.ts, group, { withYear: spansYears }) : null);
 		prevState.xTicks.forEach((tx: any, j: any) => { if (newXT[j] !== null) tx.textContent = newXT[j]; });
-		if (prevState.prevLine && prevPts.length) prevState.prevLine.setAttribute("d", "M" + prevPts.map((p) => p[0] + "," + p[1]).join(" L"));
+		if (prevState.prevLine && prevPts.length) prevState.prevLine.setAttribute("d", monotoneLine(prevPts));
 		prevState.hover.pts = pts;
 		prevState.hover.series = series;
 		prevState.hover.prevAt = prevAt;
@@ -314,15 +314,13 @@ function renderTrafficChart(data: any, group: any) {
 	});
 
 	// area
-	const areaPath = "M" + pts[0][0] + "," + (PAD.top + ih) + " L" + pts.map((p) => p[0] + "," + p[1]).join(" L") + " L" + pts[pts.length - 1][0] + "," + (PAD.top + ih) + " Z";
 	const area = document.createElementNS(ns, "path") as any;
-	area.setAttribute("d", areaPath);
+	area.setAttribute("d", monotoneArea(pts, PAD.top + ih));
 	area.setAttribute("fill", "url(#trafficFill)");
 	svg.appendChild(area);
 
-	const linePath = "M" + pts.map((p) => p[0] + "," + p[1]).join(" L");
 	const line = document.createElementNS(ns, "path") as any;
-	line.setAttribute("d", linePath);
+	line.setAttribute("d", monotoneLine(pts));
 	line.setAttribute("class", "traffic-line");
 	svg.appendChild(line);
 
@@ -331,7 +329,7 @@ function renderTrafficChart(data: any, group: any) {
 	let prevLine: any = null;
 	if (prevPts.length) {
 		prevLine = document.createElementNS(ns, "path") as any;
-		prevLine.setAttribute("d", "M" + prevPts.map((p) => p[0] + "," + p[1]).join(" L"));
+		prevLine.setAttribute("d", monotoneLine(prevPts));
 		prevLine.setAttribute("class", "traffic-line-prev");
 		svg.appendChild(prevLine);
 	}

@@ -5,7 +5,7 @@ import { handleAuthError } from "./bridge/session";
 import { $ } from "./dom";
 import { safeStore } from "./settings";
 import { t } from "./i18n/index";
-import { animateNum, fmtNum, fmtPct } from "./util";
+import { animateNum, fmtNum, fmtPct, monotoneArea, monotoneLine } from "./util";
 import { client, demoMode, homeData, homeQuery, homeSort, homeToken, setDataLoading, setHomeData, setHomeToken } from "./state";
 import { emptyEl, renderHomeDemo } from "./render/cards";
 
@@ -48,8 +48,8 @@ function sparklineSVG(series: any) {
 	const x = (i: any) => (n === 1 ? W / 2 : (i / (n - 1)) * W);
 	const y = (v: any) => H - 3 - (v / max) * (H - 8);
 	const pts = series.map((s: any, i: any) => [x(i), y(s.count)]);
-	const line = "M" + pts.map((p: any) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" L");
-	const area = line + ` L${pts[pts.length - 1][0].toFixed(1)},${H} L${pts[0][0].toFixed(1)},${H} Z`;
+	const line = monotoneLine(pts);
+	const area = monotoneArea(pts, H);
 	const defs = document.createElementNS(ns, "defs") as any;
 	const grad = document.createElementNS(ns, "linearGradient") as any;
 	grad.id = "sparkFill";
