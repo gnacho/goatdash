@@ -14,6 +14,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install and build
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+
       - name: Write version.json
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
