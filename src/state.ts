@@ -55,18 +55,18 @@ export function setTrafficData(data: any, days?: any) {
 	refreshTrafficChart();
 }
 
-export let switchQuery: any = null;
+export let switchQuery = "";
 export let precacheToken: any = null;
 // (customEnd ya se declara arriba junto a customStart)
 export let client: any = null;
-export let pathsCache: any = null;
+export let pathsCache = new Map();   // siteKey -> { paths: [...], at: ts }
 export let filterDebounce: any = null;
-export let autoTimer: any = null;
-export let homeToken: any = null;
+export let autoTimer: any = null;   // intervalo de auto-actualización de los datos (issue #59)
+export let homeToken: { cancelled?: boolean } | null = null;
 export let settingsSiteId: any = null;
-export let refreshTick: any = null;
+export let refreshTick = 0;
 export let rateTimer: any = null;
-export let dataLoading: any = null;
+export let dataLoading = false; // hay una carga (dashboard o home) en curso: no encolar otra
 
 // --- setters (ESM: los bindings importados no se reasignan)
 export function setLang(value: any) { lang = value; }

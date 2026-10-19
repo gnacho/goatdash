@@ -34,7 +34,7 @@ interface SWFetchEvent extends Event {
 	respondWith(response: Promise<Response> | Response): void;
 }
 const swSelf = self as unknown as SWSelf;
-const CACHE = "goatdash-v39";
+const CACHE = "goatdash-v40";
 const SHELL = ["/", "/index.html", "/styles.css", "/theme.js", "/app.js", "/fixtures.js", "/update-check.js", "/version.json", "/assets/world-map.js"];
 
 self.addEventListener("install", ((e: SWLifecycleEvent) => {
