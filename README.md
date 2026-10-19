@@ -167,7 +167,7 @@ Click almost anything to drill down: a page shows its referrers, a referrer show
 
 ## Development
 
-goatdash ships plain HTML, CSS and JavaScript: `index.html` and `styles.css` plus the built `app.js`, `theme.js`, `fixtures.js`, `sw.js` and `update-check.js`. The sources live in `src/*.ts` and are compiled with esbuild (`npm run build`), which keeps the historical filenames so the cache-bust query, the service worker and the server-side updater work unchanged. `npm run typecheck` runs `tsc --noEmit` in strict mode. The demo data lives in `src/fixtures.ts` and mirrors the real API response shape.
+goatdash ships plain HTML, CSS and JavaScript: `index.html` and `styles.css` plus a handful of files compiled from the TypeScript sources in `src/`. The build (`npm run build`, esbuild) keeps the historical filenames so the cache-bust query, the service worker and the server-side updater work unchanged; the compiled files are not committed. `npm run typecheck` runs `tsc --noEmit` in strict mode. Layout: `src/core` (types, state, api), `src/render` (panels and chart), `src/bridge` (entry points shared by several views) and the views themselves (`home`, `sites`, `params`, `dashboard`, ...). The demo data lives in `src/fixtures.ts` and mirrors the real API response shape.
 
 ```sh
 # Serve the repo and open http://localhost:8000

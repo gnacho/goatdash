@@ -1,5 +1,39 @@
-// Shared types for Goatdash. Pure type declarations: esbuild erases them at
-// build time, so the runtime output is identical to the historical JS.
+// Shared types: state shapes, API payloads and DOM helpers.
+
+export interface Kpi {
+	label: string;
+	value: string;
+	num?: number;
+	sub: string;
+	string?: boolean;
+	trend?: number | null;
+	metric?: string;
+	live?: boolean;
+}
+
+type I18nKey = string;
+
+	export interface APIError extends Error {
+	kind?: string;
+	retryAfter?: number;
+}
+
+	export interface TopListOpts {
+	rank?: boolean;
+	formatName?: (i: any) => string;
+	nameSub?: (i: any) => string | null;
+	count?: (i: any) => number;
+	total?: number;
+	max?: number;
+	showAll?: boolean;
+	page?: string | null;
+	demoDetails?: any;
+	onRowClick?: ((item: any, row: HTMLElement) => void) | null;
+	prefix?: (i: any) => string;
+	badge?: (i: any) => string | null;
+	isSelected?: (i: any) => boolean;
+	rowTitle?: ((i: any) => string) | null;
+}
 
 export interface UpdateCheckResult {
 	current?: string;
@@ -8,28 +42,3 @@ export interface UpdateCheckResult {
 	tag?: string;
 	error?: unknown;
 }
-
-export interface GoatdashUpdateApi {
-	check(opts?: {
-		force?: boolean;
-		onResult?: (result: UpdateCheckResult) => void;
-	}): Promise<void>;
-	showMessage(text: string, autoHide?: boolean): void;
-	apply(): Promise<{ ok: boolean; version?: string; error?: unknown }>;
-	setToken(v: string): void;
-}
-
-declare global {
-	interface Window {
-		GoatdashUpdate?: GoatdashUpdateApi;
-		// any: the demo fixture object shape is defined in fixtures.ts and only
-		// consumed dynamically by app.ts; keeping it loosely typed here.
-		GOATDASH_DEMO?: any;
-		// Globals injected by assets/world-map.js before app.js runs.
-		WORLD_MAP_NAMES?: Record<string, string>;
-		WORLD_MAP_PATHS?: Record<string, string>;
-		WORLD_MAP_VIEWBOX?: string;
-	}
-}
-
-export {};

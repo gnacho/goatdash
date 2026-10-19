@@ -1,2 +1,10 @@
 dist/
 node_modules/
+
+# Build output: generado por `npm run build` desde src/*.ts.
+# No se versiona; la release lo empaqueta desde el build de CI.
+/app.js
+/sw.js
+/theme.js
+/fixtures.js
+/update-check.js

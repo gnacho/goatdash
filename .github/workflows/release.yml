@@ -36,6 +36,8 @@ jobs:
           mkdir -p dist
           TMP=$(mktemp -d)
           mkdir "${TMP}/goatdash"
+          # theme.js, app.js, fixtures.js, sw.js y update-check.js los genera
+          # el paso de build desde src/*.ts: no se versionan.
           cp -r index.html styles.css theme.js app.js fixtures.js sw.js update-check.js version.json \
             assets robots.txt LICENSE LICENSE.world-map "${TMP}/goatdash/"
           tar -czf "dist/goatdash-${VERSION}.tar.gz" -C "${TMP}" goatdash

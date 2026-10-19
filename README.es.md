@@ -166,7 +166,7 @@ Pulsa casi cualquier cosa para hacer drill: una página muestra sus referrers, u
 
 ## Desarrollo
 
-goatdash sirve HTML, CSS y JavaScript planos: `index.html` y `styles.css` más los ficheros compilados `app.js`, `theme.js`, `fixtures.js`, `sw.js` y `update-check.js`. Las fuentes viven en `src/*.ts` y se compilan con esbuild (`npm run build`), que conserva los nombres históricos para que la query de cache-bust, el service worker y el updater del servidor sigan funcionando sin cambios. `npm run typecheck` ejecuta `tsc --noEmit` en modo estricto. Los datos de demo viven en `src/fixtures.ts` y reflejan la forma real de las respuestas de la API.
+goatdash sirve HTML, CSS y JavaScript planos: `index.html` y `styles.css` más unos pocos ficheros compilados desde las fuentes TypeScript de `src/`. El build (`npm run build`, esbuild) conserva los nombres históricos para que la query de cache-bust, el service worker y el updater del servidor sigan funcionando sin cambios; los ficheros compilados no se versionan. `npm run typecheck` ejecuta `tsc --noEmit` en modo estricto. Estructura: `src/render` (paneles y gráfica), `src/bridge` (puntos de entrada compartidos por varias vistas) y las vistas (`home`, `sites`, `params`, `dashboard`, ...). Los datos de demo viven en `src/fixtures.ts` y reflejan la forma real de las respuestas de la API.
 
 ```sh
 # Sirve el repo y abre http://localhost:8000

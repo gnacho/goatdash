@@ -176,7 +176,8 @@ import type { UpdateCheckResult } from "./types";
 		banner.hidden = false;
 		if (autoHide) {
 			clearTimeout((showMessageImpl as ShowMessageFn)._timer);
-			(showMessageImpl as ShowMessageFn)._timer = setTimeout(() => { banner.hidden = true; }, 6000);
+	(showMessageImpl as ShowMessageFn)._timer = setTimeout(() => { banner.hidden = true;
+	}, 6000);
 		}
 	}
 	const showMessage = showMessageImpl as ShowMessageFn;
