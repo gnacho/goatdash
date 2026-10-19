@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://stats.cloudless.club"><img alt="Demo en vivo" src="https://img.shields.io/badge/live%20demo-stats.cloudless.club-2b5884"></a>
   <a href="LICENSE"><img alt="Licencia: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
-  <img alt="Build: esbuild" src="https://img.shields.io/badge/build-esbuild-5a5a5a">
+  <img alt="Build: Vite" src="https://img.shields.io/badge/build-vite-5a5a5a">
   <img alt="Dependencias" src="https://img.shields.io/badge/dependencias-0-2b5884">
 </p>
 
@@ -25,7 +25,7 @@
   </picture>
 </p>
 
-goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador como JavaScript plano: sin framework, sin CDN, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Las fuentes son TypeScript en `src/`, compiladas con esbuild a los mismos ficheros planos que se sirven. Empezó como un rewrite de [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) y creció hasta ser un dashboard multi-sitio que lee varios sitios de GoatCounter, cada uno servido en su propio dominio.
+goatdash es un dashboard respetuoso con la privacidad para la analítica de [GoatCounter](https://www.goatcounter.com/). Funciona entero en el navegador como JavaScript plano: sin framework, sin CDN, solo unos pocos ficheros estáticos que hablan con la API v0 de GoatCounter. Las fuentes son TypeScript en `src/`, compiladas con Vite a los mismos ficheros planos que se sirven. Empezó como un rewrite de [abhishekhsingh/goatcounter-dashboard](https://github.com/abhishekhsingh/goatcounter-dashboard) (MIT) y creció hasta ser un dashboard multi-sitio que lee varios sitios de GoatCounter, cada uno servido en su propio dominio.
 
 ## ¿Por qué existe esto?
 
@@ -166,9 +166,14 @@ Pulsa casi cualquier cosa para hacer drill: una página muestra sus referrers, u
 
 ## Desarrollo
 
-goatdash sirve HTML, CSS y JavaScript planos: `index.html` y `styles.css` más unos pocos ficheros compilados desde las fuentes TypeScript de `src/`. El build (`npm run build`, esbuild) conserva los nombres históricos para que la query de cache-bust, el service worker y el updater del servidor sigan funcionando sin cambios; los ficheros compilados no se versionan. `npm run typecheck` ejecuta `tsc --noEmit` en modo estricto. Estructura: `src/render` (paneles y gráfica), `src/bridge` (puntos de entrada compartidos por varias vistas) y las vistas (`home`, `sites`, `params`, `dashboard`, ...). Los datos de demo viven en `src/fixtures.ts` y reflejan la forma real de las respuestas de la API.
+goatdash sirve HTML, CSS y JavaScript planos: `index.html` y `styles.css` más unos pocos ficheros compilados desde las fuentes TypeScript de `src/`. El build (`npm run build`, Vite) conserva los nombres históricos para que la query de cache-bust, el service worker y el updater del servidor sigan funcionando sin cambios; los ficheros compilados no se versionan. `npm run typecheck` ejecuta `tsc --noEmit` en modo estricto. Estructura: el núcleo compartido (tipos, estado, api, settings, i18n, utilidades) en la raíz, `src/render/` (paneles y gráfica), `src/bridge/` (puntos de entrada compartidos por varias vistas) y las vistas (`home`, `sites`, `params`, `dashboard`, ...). `src/main.ts` importa todo el grafo y llama a `boot()`. Los datos de demo viven en `src/fixtures.ts` y reflejan la forma real de las respuestas de la API.
 
 ```sh
+npm install          # dependencias de desarrollo (TypeScript y Vite)
+npm run typecheck    # tsc --noEmit en modo estricto
+npm run build        # genera app.js, theme.js, sw.js, fixtures.js y update-check.js
+npm run check        # typecheck + build
+
 # Sirve el repo y abre http://localhost:8000
 python3 -m http.server 8000
 ```

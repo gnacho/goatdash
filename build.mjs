@@ -1,39 +1,58 @@
-// Build: src/*.ts -> JS at repo root with the historical filenames, so the
-// index.html references, the ?v= cache-bust scheme, the service worker and the
-// server-side tarball updater keep working unchanged.
+// Build con Vite: src/*.ts -> JS en la raíz del repo con los nombres
+// históricos. El resto de la cadena (index.html, ?v=, service worker y
+// updater del servidor) no cambia: los ficheros se siguen sirviendo planos.
 //
-// - app.js: el grafo completo (main.ts), formato IIFE para cargarse con
-//   <script src> sin type="module" (el CSP no cambia).
-// - theme.js / sw.js: scripts clasicos (anti-FOUC y service worker), bundleados
-//   y sin `export` final porque no los importa nadie.
-// - fixtures.js / update-check.js: tambien clasicos.
-import { build } from "esbuild";
+// Vite no permite outDir = root (se sobrescribiría el propio proyecto), así
+// que compilamos a un directorio temporal y movemos los ficheros.
+import { build } from "vite";
+import { mkdirSync, rmSync, renameSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 
-const shared = {
-  bundle: true,
-  minify: false,
-  sourcemap: false,
-  target: "es2022",
-  logLevel: "info",
+const root = resolve(import.meta.dirname);
+const out = resolve(root, ".build");
+
+const ENTRIES = {
+  app: "src/main.ts",
+  theme: "src/theme.ts",
+  sw: "src/sw.ts",
+  fixtures: "src/fixtures.ts",
+  "update-check": "src/update-check.ts",
 };
 
-await build({
-  ...shared,
-  entryPoints: { app: "src/main.ts" },
-  outdir: ".",
-  format: "iife",
-  // los modulos internos no deben exponer export al final del bundle
-  footer: { js: "" },
-});
+rmSync(out, { recursive: true, force: true });
+mkdirSync(out, { recursive: true });
 
-await build({
-  ...shared,
-  entryPoints: {
-    theme: "src/theme.ts",
-    sw: "src/sw.ts",
-    fixtures: "src/fixtures.ts",
-    "update-check": "src/update-check.ts",
-  },
-  outdir: ".",
-  format: "iife",
-});
+for (const [name, entry] of Object.entries(ENTRIES)) {
+  await build({
+    root,
+    logLevel: "warn",
+    configFile: false,
+    build: {
+      target: "es2022",
+      minify: false,
+      sourcemap: false,
+      emptyOutDir: false,
+      reportCompressedSize: false,
+      copyPublicDir: false,
+      outDir: out,
+      lib: {
+        entry: resolve(root, entry),
+        // nombres históricos, sin hash: el cache-bust es el ?v= manual
+        fileName: () => `${name}.js`,
+        // IIFE: se carga con <script src> clásico, el CSP no cambia
+        formats: ["iife"],
+        name: "Goatdash_" + name.replace(/[^a-zA-Z0-9]/g, "_"),
+      },
+    },
+  });
+}
+
+for (const name of Object.keys(ENTRIES)) {
+  const from = resolve(out, `${name}.js`);
+  if (!existsSync(from)) {
+    throw new Error(`[vite] no se generó ${name}.js`);
+  }
+  renameSync(from, resolve(root, `${name}.js`));
+}
+rmSync(out, { recursive: true, force: true });
+console.log("[vite] app.js, theme.js, sw.js, fixtures.js y update-check.js generados");
