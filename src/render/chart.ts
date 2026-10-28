@@ -9,6 +9,7 @@ import { animateNum, fmtNum, fmtPct, monotoneArea, monotoneLine, tween } from ".
 import { formatTooltipDate, formatXTick, lastHourVisitors, presetLabel } from "../datetime";
 import { buildTotalSeries, buildTrafficSeries, effectiveGroup, metricSeries } from "../series";
 import { clearTooltips, emptyEl, showTooltip } from "./cards";
+import { getChartTooltipPosition } from "./chart-tooltip";
 
 export function refreshTrafficChart() {
 	if (!lastChartData) return;
@@ -355,8 +356,9 @@ function renderTrafficChart(data: any, group: any) {
 		});
 		clearTooltips();
 		const s = h.series[best];
+		const point = h.pts[best];
 		const dot = document.createElementNS(ns, "circle") as any;
-		dot.setAttribute("cx", h.pts[best][0]); dot.setAttribute("cy", h.pts[best][1]);
+		dot.setAttribute("cx", point[0]); dot.setAttribute("cy", point[1]);
 		dot.setAttribute("r", "4");
 		dot.setAttribute("fill", "var(--chart-line)");
 		svg.appendChild(dot);
@@ -365,8 +367,15 @@ function renderTrafficChart(data: any, group: any) {
 		const pv = h.prevAt(best);
 		if (pv) tipHtml += `<br><span class="tt-num">${fmtNum(pv.count)}</span> ${t("chart.previous")}`;
 		const tip = showTooltip(e.target, tipHtml);
-		tip.style.left = (e.clientX + 12) + "px";
-		tip.style.top = (e.clientY - 30) + "px";
+		tip.classList.add("chart-tooltip");
+		tip.style.maxWidth = `${Math.max(0, rect.width - 16)}px`;
+		const anchor = {
+			x: rect.left + (point[0] / W) * rect.width,
+			y: rect.top + (point[1] / H) * rect.height,
+		};
+		const position = getChartTooltipPosition(rect, tip.getBoundingClientRect(), anchor, { x: window.scrollX, y: window.scrollY });
+		tip.style.left = position.left + "px";
+		tip.style.top = position.top + "px";
 	});
 	overlay.addEventListener("mouseleave", clearTooltips);
 
