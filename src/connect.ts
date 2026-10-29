@@ -7,6 +7,8 @@ import { STORAGE_KEY, safeStore } from "./settings";
 import { t } from "./i18n/index";
 import { client, config, currentSite, demoMode, setClient, setConfig, setCurrentSite, setDemoMode } from "./state";
 import { APIClient } from "./api";
+import { loadFixtures } from "./demo";
+import { normalizeServerUrl, siteBaseUrl } from "./security";
 
 export function initConnect() {
 	$("#connect-form").addEventListener("submit", async (e: Event) => {
@@ -19,19 +21,18 @@ export function initConnect() {
 		const urlRaw = ($("#gc-url") as HTMLInputElement).value.trim();
 		const keyRaw = ($("#gc-key") as HTMLInputElement).value.trim();
 		try {
-			let u = urlRaw;
-			if (!/^https?:\/\//i.test(u)) u = "https://" + u;
-			u = u.replace(/\/+$/, "");
-			let parsed;
-			try { parsed = new URL(u); } catch { throw new Error(t("connect.urlBad")); }
-			const baseURL = parsed.protocol + "//" + parsed.host;
+			let baseURL: string;
+			try { baseURL = normalizeServerUrl(urlRaw); }
+			catch (e: any) {
+				throw new Error(e && e.message === "https" ? t("connect.httpsRequired") : t("connect.urlBad"));
+			}
 			if (!keyRaw) throw new Error(t("connect.keyRequired"));
 			const c = new APIClient(baseURL, keyRaw);
 			const me = await c.request("/api/v0/me", { retries: 1 });
 			setConfig({ baseURL, apiKey: keyRaw, me });
 			deriveTokenScope();
 			setCurrentSite(config ? config.site || null : null);
-			(config as any).siteBaseURL = currentSite ? "https://" + currentSite : null;
+			c.siteBaseURL = siteBaseUrl(currentSite);
 			c.onRateLimited = (e: any) => showRateBanner(e.retryAfter);
 			setClient(c);
 			safeStore(STORAGE_KEY, JSON.stringify(config));
@@ -48,9 +49,22 @@ export function initConnect() {
 		}
 	});
 
-	$("#demo-btn").addEventListener("click", () => {
-		setDemoMode(true);
-		setConfig({ baseURL: "_demo_", apiKey: "_demo_", me: { site: { cname: "Demo site", code: "demo" } } });
-		loadDashboard();
+	$("#demo-btn").addEventListener("click", async () => {
+		const err = $("#connect-error") as HTMLElement;
+		const btn = $("#demo-btn") as HTMLButtonElement;
+		err.hidden = true;
+		btn.disabled = true;
+		try {
+			await loadFixtures();
+			setDemoMode(true);
+			setConfig({ baseURL: "_demo_", apiKey: "_demo_", me: { site: { cname: "Demo site", code: "demo" } } });
+			loadDashboard();
+		} catch (e: any) {
+			console.warn("[demo] fixtures failed", e);
+			err.textContent = t("connect.demoErr");
+			err.hidden = false;
+		} finally {
+			btn.disabled = false;
+		}
 	});
 }

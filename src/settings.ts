@@ -7,6 +7,10 @@ export const HOME_SORT_KEY = "gc-home-sort-v1";
 export const THEME_KEY = "gc-dashboard-theme-v1";
 export const LANG_KEY = "gc-dashboard-lang-v1";
 export const REFRESH_KEY = "gc-auto-refresh-v1";
+export function readStore(key: string): string | null {
+	try { return localStorage.getItem(key); }
+	catch { return null; }
+}
 export function safeStore(key: string, value: string) {
 	try { localStorage.setItem(key, value); }
 	catch {

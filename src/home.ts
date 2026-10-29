@@ -3,7 +3,7 @@ import { homeSiteList, onSiteChange, showDashboard, siteDomain, siteIcoEl } from
 import { loadData } from "./dashboard";
 import { handleAuthError } from "./bridge/session";
 import { $ } from "./dom";
-import { safeStore } from "./settings";
+import { readStore, safeStore } from "./settings";
 import { t } from "./i18n/index";
 import { animateNum, fmtNum, fmtPct, monotoneArea, monotoneLine } from "./util";
 import { client, demoMode, homeData, homeQuery, homeSort, homeToken, setDataLoading, setHomeData, setHomeToken } from "./state";
@@ -84,7 +84,7 @@ function homeCacheKeyFor(e: any) { return e.isAccount ? "@" : e.cname; }
 
 function homeCacheRead() {
 	try {
-		const raw = localStorage.getItem(HOME_CACHE_KEY);
+		const raw = readStore(HOME_CACHE_KEY);
 		if (!raw) return null;
 		const obj = JSON.parse(raw);
 		if (!obj || !obj.sites || (Date.now() - (obj.ts || 0)) > HOME_CACHE_MAX_AGE_MS) return null;

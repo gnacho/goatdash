@@ -23,5 +23,20 @@ import "./connect";
 import "./controls";
 import "./footer";
 import { boot } from "./boot";
+import { isBooted, showBootError, startBootWatchdog } from "./boot-status";
+import { registerServiceWorker } from "./sw-register";
 
-boot();
+startBootWatchdog();
+window.addEventListener("error", (event) => {
+	if (!isBooted()) showBootError(event.error || event.message);
+});
+window.addEventListener("unhandledrejection", (event) => {
+	if (!isBooted()) showBootError(event.reason);
+});
+
+try {
+	boot();
+} catch (err) {
+	showBootError(err);
+}
+registerServiceWorker();

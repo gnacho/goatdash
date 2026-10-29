@@ -70,7 +70,10 @@ export function renderDonut(container: any, items: any, { total, page, onDrill, 
 			});
 			circle.addEventListener("mouseenter", () => {
 				const pct = totalCount ? ((item.count / totalCount) * 100).toFixed(1) + "%" : "";
-				showTooltip(chartWrap, `<span class="tt-num">${fmtNum(item.count)}</span> (${pct})`);
+				showTooltip(chartWrap, [
+					{ text: fmtNum(item.count), className: "tt-num" },
+					` (${pct})`,
+				]);
 			});
 			circle.addEventListener("mouseleave", clearTooltips);
 			svg.appendChild(circle);
@@ -81,7 +84,11 @@ export function renderDonut(container: any, items: any, { total, page, onDrill, 
 		const center = document.createElement("div");
 		center.className = "donut-center";
 		center.style.cssText = "position:absolute;inset:0;display:grid;place-content:center;text-align:center";
-		center.innerHTML = `<span>${fmtNum(totalCount)}</span><small>${t("kpi.pageviews")}</small>`;
+		const centerNum = document.createElement("span");
+		centerNum.textContent = fmtNum(totalCount);
+		const centerLabel = document.createElement("small");
+		centerLabel.textContent = t("kpi.pageviews");
+		center.replaceChildren(centerNum, centerLabel);
 		chartWrap.appendChild(center);
 		wrap.appendChild(chartWrap);
 

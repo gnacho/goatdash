@@ -7,6 +7,23 @@ import { renderDonut } from "./render/donut";
 import { renderGeo } from "./render/lists";
 import { renderCampaignsInto } from "./render/campaigns";
 import { drillDetail } from "./donut-drill";
+import { assetUrl } from "./assets";
+
+let fixturesPromise: Promise<void> | null = null;
+
+export function loadFixtures(): Promise<void> {
+	if ((window as any).GOATDASH_DEMO) return Promise.resolve();
+	if (fixturesPromise) return fixturesPromise;
+	fixturesPromise = new Promise<void>((resolve, reject) => {
+		const s = document.createElement("script");
+		s.src = assetUrl("fixtures.js");
+		s.onload = () => (window as any).GOATDASH_DEMO ? resolve() : reject(new Error("fixtures.js loaded without data"));
+		s.onerror = () => reject(new Error("fixtures.js failed to load"));
+		document.body.appendChild(s);
+	});
+	fixturesPromise.catch(() => { fixturesPromise = null; });
+	return fixturesPromise;
+}
 
 export function isDemoHost() {
 	const h = location.hostname || "";

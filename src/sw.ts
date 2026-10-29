@@ -34,8 +34,8 @@ interface SWFetchEvent extends Event {
 	respondWith(response: Promise<Response> | Response): void;
 }
 const swSelf = self as unknown as SWSelf;
-const CACHE = "goatdash-v47";
-const SHELL = ["/", "/index.html", "/styles.css", "/theme.js", "/app.js", "/fixtures.js", "/update-check.js", "/version.json", "/assets/world-map.js"];
+const CACHE = "goatdash-v48";
+const SHELL = ["/", "/index.html", "/styles.css", "/theme.js", "/app.js", "/update-check.js", "/version.json"];
 
 self.addEventListener("install", ((e: SWLifecycleEvent) => {
 	e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => swSelf.skipWaiting()));
@@ -108,12 +108,22 @@ self.addEventListener("fetch", ((e: SWFetchEvent) => {
 		return;
 	}
 
-	// Assets estáticos (?v=N los versiona): caché primero.
-	e.respondWith(
-		caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {
+	// Assets estáticos (?v=N los versiona): primero la URL exacta. Si no está
+	// y la red falla, se usa el precache del shell (sin query) como respaldo
+	// offline. No se ignora la query en la búsqueda normal: un ?v= nuevo nunca
+	// debe servirse con el cuerpo viejo.
+	e.respondWith((async () => {
+		const exact = await caches.match(e.request);
+		if (exact) return exact;
+		try {
+			const res = await fetch(e.request);
 			const copy = res.clone();
 			caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
 			return res;
-		}))
-	);
+		} catch (err) {
+			const shell = await caches.match(url.pathname);
+			if (shell) return shell;
+			throw err;
+		}
+	})());
 }) as unknown as EventListener);

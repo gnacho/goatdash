@@ -29,10 +29,12 @@ import { renderCampaignsInto } from "./render/campaigns";
 import { closeExpand } from "./render/expand";
 import { activatePanelTab } from "./render/tabs";
 import { cacheKeyFor } from "./cache";
+import { markBooted } from "./boot-status";
 
 export function loadDashboard() {
 	$("#connect-screen").hidden = true;
 	$("#dash-screen").hidden = false;
+	markBooted();
 	$("#demo-banner").hidden = !demoMode;
 	applyLang();
 	applyTheme();
@@ -60,6 +62,8 @@ export function loadDashboard() {
 		if (deepLink) applyHash();
 		else if (sitesList.length > 1) showHome();
 		else { showDashboard(); loadData(); }
+	}).catch((err) => {
+		console.error("[dashboard] site selector failed", err);
 	});
 }
 export async function loadData(opts?: any) {
