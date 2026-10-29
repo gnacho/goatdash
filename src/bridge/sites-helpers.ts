@@ -8,6 +8,7 @@ import { emptyEl } from "../render/cards";
 import { loadHome, syncTopbarHeight } from "../home";
 import { syncRealtime } from "../params";
 import { SERVICE_SUBDOMAINS, SITE_FAVICONS, siteColorIndex } from "../sites";
+import { siteBaseUrl } from "../security";
 
 function displayDomain(cname: any) {
 	const parts = (cname || "").split(".");
@@ -207,7 +208,7 @@ export function onSiteChange(cname: any) {
 		const h = hashForSite(cname);
 		if (location.hash !== h) location.hash = h;
 	}
-	if (client) client.siteBaseURL = currentSite ? "https://" + currentSite : null;
+	if (client) client.siteBaseURL = siteBaseUrl(currentSite);
 	if (config) {
 		config.site = currentSite;
 		safeStore(STORAGE_KEY, JSON.stringify(config));

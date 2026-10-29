@@ -9,6 +9,7 @@ import { animateNum, fmtNum, fmtPct, monotoneArea, monotoneLine, tween } from ".
 import { formatTooltipDate, formatXTick, lastHourVisitors, presetLabel } from "../datetime";
 import { buildTotalSeries, buildTrafficSeries, effectiveGroup, metricSeries } from "../series";
 import { clearTooltips, emptyEl, showTooltip } from "./cards";
+import type { TooltipPart } from "./cards";
 import { getChartTooltipPosition } from "./chart-tooltip";
 
 export function refreshTrafficChart() {
@@ -363,10 +364,14 @@ function renderTrafficChart(data: any, group: any) {
 		dot.setAttribute("fill", "var(--chart-line)");
 		svg.appendChild(dot);
 		setTimeout(() => dot.remove(), 50);
-		let tipHtml = `<div class="tt-date">${formatTooltipDate(s.ts, h.group)}</div><span class="tt-num">${fmtNum(s.count)}</span> ${t(chartMetric === "pageviews" ? "kpi.pageviews" : "kpi.visitors")}`;
+		const parts: TooltipPart[] = [
+			{ text: formatTooltipDate(s.ts, h.group), className: "tt-date", tag: "div" },
+			{ text: fmtNum(s.count), className: "tt-num" },
+			` ${t(chartMetric === "pageviews" ? "kpi.pageviews" : "kpi.visitors")}`,
+		];
 		const pv = h.prevAt(best);
-		if (pv) tipHtml += `<br><span class="tt-num">${fmtNum(pv.count)}</span> ${t("chart.previous")}`;
-		const tip = showTooltip(e.target, tipHtml);
+		if (pv) parts.push({ br: true }, { text: fmtNum(pv.count), className: "tt-num" }, ` ${t("chart.previous")}`);
+		const tip = showTooltip(e.target, parts);
 		tip.classList.add("chart-tooltip");
 		tip.style.maxWidth = `${Math.max(0, rect.width - 16)}px`;
 		const anchor = {

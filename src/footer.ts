@@ -1,6 +1,6 @@
 // Footer: version and GitHub stars counter.
 import { $ } from "./dom";
-import { REPO_URL, VERSION, safeStore } from "./settings";
+import { REPO_URL, VERSION, readStore, safeStore } from "./settings";
 import { fmtNum } from "./util";
 
 const FOOT_STARS_KEY = "gc-stars-v1";
@@ -16,7 +16,7 @@ export function initFooter() {
 	if (!starCount) return;
 	let cached: { count?: number; ts?: number } | null = null;
 	try {
-		const raw = localStorage.getItem(FOOT_STARS_KEY);
+		const raw = readStore(FOOT_STARS_KEY);
 		if (raw) { const o = JSON.parse(raw); if (o && typeof o.count === "number") cached = o; }
 	} catch { /* ignore */ }
 	if (cached) starCount.textContent = fmtNum(cached.count);

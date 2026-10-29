@@ -10,9 +10,11 @@ import { applyLang } from "../lang";
 export function disconnect(msg?: any) {
 	stopRealtime();
 	stopAutoRefresh();
-	if (client) client.clearCache();
-	localStorage.removeItem(STORAGE_KEY);
-	localStorage.removeItem(HOME_CACHE_KEY);
+	try { if (client) client.clearCache(); } catch { /* denied storage: non-fatal */ }
+	try {
+		localStorage.removeItem(STORAGE_KEY);
+		localStorage.removeItem(HOME_CACHE_KEY);
+	} catch { /* private mode / denied storage: non-fatal */ }
 	try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ }
 	setConfig(null); setDemoMode(false); setCurrentSite(null); setSitesList([]);
 	setHomeView(false); setHomeData([]); setHomeQuery("");

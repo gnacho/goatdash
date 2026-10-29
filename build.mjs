@@ -29,7 +29,7 @@ for (const [name, entry] of Object.entries(ENTRIES)) {
     configFile: false,
     build: {
       target: "es2022",
-      minify: false,
+      minify: true,
       sourcemap: false,
       emptyOutDir: false,
       reportCompressedSize: false,

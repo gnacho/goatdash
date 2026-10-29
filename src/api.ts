@@ -3,6 +3,7 @@ import { APIError } from "./types";
 import { $ } from "./dom";
 import { CACHE_PREFIX, CACHE_TTL_MS } from "./settings";
 import { t } from "./i18n/index";
+import { isSafeBaseUrl, isSafeHostname } from "./security";
 
 const REQUEST_SPACING_MS = 30;   // intervalo mínimo entre arranques (~33 req/s)
 // Cross-origin (multi-sitio sin proxy): el preflight OPTIONS se cachea 24h
@@ -18,6 +19,7 @@ const RATE_LOW_WATERMARK = 6;
 const RATE_WAIT_CAP_MS = 30_000;
 
 const MAX_CONCURRENCY = 8;       // peticiones en vuelo simultáneas
+const REQUEST_TIMEOUT_MS = 15_000;
 export const DEVICE_LABELS = { phone: "device.phone", tablet: "device.tablet", desktop: "device.desktop", desktophd: "device.desktophd", unknown: "device.unknown" };
 
 
@@ -51,13 +53,15 @@ export class APIClient {
 	clearCache() {
 		// Limpia la caché de la cuenta (baseURL) y de todos los subsitios ya
 		// cacheados (sus cnames). La clave incluye el prefijo de URL completo.
-		const keys: string[] = [];
-		for (let i = 0; i < localStorage.length; i++) {
-			const k = localStorage.key(i);
-			if (!k || !k.startsWith(CACHE_PREFIX)) continue;
-			if ([...this._knownBases].some((b) => k.startsWith(CACHE_PREFIX + b + ":"))) keys.push(k);
-		}
-		keys.forEach((k) => localStorage.removeItem(k));
+		try {
+			const keys: string[] = [];
+			for (let i = 0; i < localStorage.length; i++) {
+				const k = localStorage.key(i);
+				if (!k || !k.startsWith(CACHE_PREFIX)) continue;
+				if ([...this._knownBases].some((b) => k.startsWith(CACHE_PREFIX + b + ":"))) keys.push(k);
+			}
+			keys.forEach((k) => localStorage.removeItem(k));
+		} catch { /* private mode / denied storage: non-fatal */ }
 	}
 
 	// Resuelve la base de URL para un endpoint. `site`:
@@ -67,8 +71,15 @@ export class APIClient {
 	_baseFor(site?: string | null) {
 		let base;
 		if (site === null) base = this.baseURL;
-		else if (site) base = "https://" + site;
-		else base = this.siteBaseURL || this.baseURL;
+		else if (site) {
+			if (!isSafeHostname(site)) {
+				const err = new Error("Invalid site host") as APIError;
+				err.kind = "config";
+				throw err;
+			}
+			base = "https://" + site;
+		}
+		else base = (this.siteBaseURL && isSafeBaseUrl(this.siteBaseURL)) ? this.siteBaseURL : this.baseURL;
 		this._knownBases.add(base);
 		return base;
 	}
@@ -98,11 +109,26 @@ export class APIClient {
 	async _fetchOnce(endpoint: string, site?: string | null, method = "GET", body?: unknown): Promise<any> {
 		const headers: Record<string, string> = { Authorization: "Bearer " + this.apiKey };
 		if (body !== undefined) headers["Content-Type"] = "application/json";
-		const res = await fetch(this._baseFor(site) + endpoint, {
-			method,
-			headers,
-			body: body !== undefined ? JSON.stringify(body) : undefined,
-		});
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+		let res: Response;
+		try {
+			res = await fetch(this._baseFor(site) + endpoint, {
+				method,
+				headers,
+				body: body !== undefined ? JSON.stringify(body) : undefined,
+				signal: controller.signal,
+			});
+		} catch (e: any) {
+			if (e && e.name === "AbortError") {
+				const err = new Error(t("err.timeout")) as APIError;
+				err.kind = "timeout";
+				throw err;
+			}
+			throw e;
+		} finally {
+			clearTimeout(timeout);
+		}
 		this._observeRate(res);
 		if (res.status === 401) {
 			const err = new Error(t("err.401")) as APIError; err.kind = "auth"; throw err;
@@ -220,7 +246,7 @@ export class APIClient {
 					return data;
 				} catch (e: any) {
 					lastErr = e;
-					const retriable = e instanceof TypeError || e.kind === "rate";
+					const retriable = e instanceof TypeError || e.kind === "rate" || e.kind === "timeout";
 					if (!retriable || attempt === retries) break;
 					await new Promise((r) => setTimeout(r, Math.min(this._backoff(e, attempt), RATE_WAIT_CAP_MS)));
 				}

@@ -1,11 +1,11 @@
 // Auto-refresh preference (off/1m/5m).
 import { $ } from "./dom";
-import { REFRESH_KEY } from "./settings";
+import { REFRESH_KEY, readStore } from "./settings";
 import { t } from "./i18n/index";
 import { autoRefreshSec } from "./state";
 
 export function readAutoRefreshPref() {
-	const raw = parseInt(localStorage.getItem(REFRESH_KEY) || "", 10);
+	const raw = parseInt(readStore(REFRESH_KEY) || "", 10);
 	if (raw === 0 || raw === 60 || raw === 300) return raw;
 	return 300;
 }

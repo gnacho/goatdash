@@ -28,10 +28,22 @@ export function emptyEl(text: any) {
 	d.textContent = text;
 	return d;
 }
-export function showTooltip(target: any, html: any) {
+export type TooltipPart = string | { text: string; className?: string; tag?: "div" | "span" } | { br: true };
+export function showTooltip(target: any, parts: TooltipPart[]) {
 	const tip = document.createElement("div");
 	tip.className = "tooltip";
-	tip.innerHTML = html;
+	for (const part of parts) {
+		if (typeof part === "string") {
+			tip.appendChild(document.createTextNode(part));
+		} else if ("br" in part) {
+			tip.appendChild(document.createElement("br"));
+		} else {
+			const el = document.createElement(part.tag || "span");
+			if (part.className) el.className = part.className;
+			el.textContent = part.text;
+			tip.appendChild(el);
+		}
+	}
 	document.body.appendChild(tip);
 	const rect = target.getBoundingClientRect();
 	const pad = 8;

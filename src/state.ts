@@ -1,18 +1,18 @@
 // Runtime state shared across views (one module owner per variable).
 import { refreshTrafficChart } from "./render/chart";
 import { readAutoRefreshPref } from "./refresh";
-import { HOME_SORT_KEY, LANG_KEY, THEME_KEY } from "./settings";
+import { HOME_SORT_KEY, LANG_KEY, THEME_KEY, readStore } from "./settings";
 import { tween } from "./util";
 import { pickGroup } from "./datetime";
 
-export let lang = localStorage.getItem(LANG_KEY) || "auto";   // modo: es | en | auto (auto = default actual)
+export let lang = readStore(LANG_KEY) || "auto";   // modo: es | en | auto (auto = default actual)
 export let config: null | { baseURL: string; apiKey: string; me?: any; site?: string | null } = null;        // { baseURL, apiKey, me }
 export let demoMode = false;
 export let demoPreset = "30d";
 export let currentSite: string | null = null;   // selector de sitio: cname o null (cuenta/Host)
 export let sitesList: any[] = [];       // [{id, cname}] from /api/v0/sites
 export let allowedSiteIDs: Set<number> | null = null; // Set de site_id permitidos por el token ([−1] o ausente = todos)
-export let theme = localStorage.getItem(THEME_KEY) || "dark";
+export let theme = readStore(THEME_KEY) || "dark";
 export let autoRefreshSec = readAutoRefreshPref();
 export let currentPreset = "30d";
 export let customStart = "", customEnd = "";
@@ -27,8 +27,8 @@ export let mapTransformState: { s: number; tx: number; ty: number } | null = nul
 export let mapDragMoved = false;
 export let mapDragSuppressClick = false;
 export let trafficCache: Record<string, any> = {};    // preset -> { points, total }
-export let chartMetric = localStorage.getItem("gd.chartMetric") || "visitors"; // visitors | pageviews
-export let chartCompare = localStorage.getItem("gd.chartCompare") === "1";     // comparativa con periodo anterior
+export let chartMetric = readStore("gd.chartMetric") || "visitors"; // visitors | pageviews
+export let chartCompare = readStore("gd.chartCompare") === "1";     // comparativa con periodo anterior
 export let lastChartData: any = null; // { total, hits } último dataset del gráfico (re-render sin refetch)
 export let lastChartDays = 30;   // días del rango actual (para pickGroup en auto)
 export let lastPrevTotalData: any = null; // respuesta stats/total del periodo anterior (tendencia + comparativa)
@@ -42,7 +42,7 @@ export let homeView = false;     // true = la vista activa es el home de tarjeta
 export let homeData: any[] = [];        // [{site, isAccount, name, cname, status, visitors, prev, series}]
 export let homeQuery = "";       // filtro de búsqueda del home
 export let homeSort = (() => {   // orden de las tarjetas (persistido)
-	try { return { by: "visitors", dir: "desc", ...JSON.parse(localStorage.getItem(HOME_SORT_KEY) || "{}") }; }
+	try { return { by: "visitors", dir: "desc", ...JSON.parse(readStore(HOME_SORT_KEY) || "{}") }; }
 	catch { return { by: "visitors", dir: "desc" }; }
 })();
 export let pathFilter: { names: string[]; label: string } | null = null;    // { names: string[], label: string } o null (todas las rutas)

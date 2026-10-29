@@ -5,8 +5,39 @@ import { fmtNum } from "../util";
 import { countryNameToCode, flagFor } from "../geo";
 import { highlightCode, mapDragMoved, mapDragSuppressClick, mapTransformState, setMapDragMoved, setMapDragSuppressClick, setMapTransformState } from "../state";
 import { clearTooltips, showTooltip } from "./cards";
+import { assetUrl } from "../assets";
 
-export function renderWorldMap(container: any, stats: any, total: any, onPathClick: any) {
+let worldMapPromise: Promise<void> | null = null;
+
+function loadWorldMap(): Promise<void> {
+	if (window.WORLD_MAP_PATHS) return Promise.resolve();
+	if (worldMapPromise) return worldMapPromise;
+	worldMapPromise = new Promise<void>((resolve, reject) => {
+		const script = document.createElement("script");
+		script.src = assetUrl("assets/world-map.js");
+		script.onload = () => resolve();
+		script.onerror = () => reject(new Error("world-map.js failed to load"));
+		document.body.appendChild(script);
+	});
+	worldMapPromise.catch(() => { worldMapPromise = null; });
+	return worldMapPromise;
+}
+
+export async function renderWorldMap(container: any, stats: any, total: any, onPathClick: any) {
+	const token = Symbol("worldmap");
+	container._worldMapToken = token;
+	try {
+		await loadWorldMap();
+	} catch (err) {
+		if (container._worldMapToken !== token) return;
+		container.innerHTML = "";
+		const failed = document.createElement("div");
+		failed.className = "empty";
+		failed.textContent = t("err.failed");
+		container.appendChild(failed);
+		return;
+	}
+	if (container._worldMapToken !== token) return;
 	container.innerHTML = "";
 	if (!window.WORLD_MAP_PATHS) return;
 	const counts: Record<string, number> = {};
@@ -91,7 +122,11 @@ export function renderWorldMap(container: any, stats: any, total: any, onPathCli
 			const name = Object.keys(counts).find((k) => countryNameToCode(k) === code);
 			const count = counts[code];
 			const pct = total ? ((count / total) * 100).toFixed(1) + "%" : "";
-			showTooltip(path, `${flagFor(name || code)} ${name || code} · <span class="tt-num">${fmtNum(count)}</span> ${pct}`);
+			showTooltip(path, [
+				`${flagFor(name || code)} ${name || code} · `,
+				{ text: fmtNum(count), className: "tt-num" },
+				` ${pct}`,
+			]);
 		});
 		path.addEventListener("mouseleave", clearTooltips);
 		g.appendChild(path);
