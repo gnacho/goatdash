@@ -1,7 +1,7 @@
 // LocalStorage helpers and version metadata.
 
 export const STORAGE_KEY = "gc-dashboard-config-v1";
-export const VERSION = "1.0.27";
+export const VERSION = "1.0.28";
 export const REPO_URL = "https://github.com/gnacho/goatdash";
 export const HOME_SORT_KEY = "gc-home-sort-v1";
 export const THEME_KEY = "gc-dashboard-theme-v1";
