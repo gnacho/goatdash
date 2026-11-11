@@ -22,10 +22,20 @@ export function errCard(key: any) {
 	wrap.append(txt, btn);
 	return wrap;
 }
-export function emptyEl(text: any) {
+export function emptyEl(text: any, action?: { label: string; onClick: () => void }) {
 	const d = document.createElement("div");
 	d.className = "empty";
-	d.textContent = text;
+	const msg = document.createElement("span");
+	msg.textContent = text;
+	d.appendChild(msg);
+	if (action) {
+		const btn = document.createElement("button");
+		btn.type = "button";
+		btn.className = "home-retry";
+		btn.textContent = action.label;
+		btn.addEventListener("click", action.onClick);
+		d.appendChild(btn);
+	}
 	return d;
 }
 export type TooltipPart = string | { text: string; className?: string; tag?: "div" | "span" } | { br: true };

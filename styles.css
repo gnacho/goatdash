@@ -1198,6 +1198,16 @@ body { min-height: 100vh; }
 	font-size: 0.88rem;
 	padding: 22px 0;
 }
+.empty .home-retry {
+	background: none;
+	border: 0;
+	padding: 0;
+	margin-left: 6px;
+	font: inherit;
+	color: var(--accent);
+	cursor: pointer;
+}
+.empty .home-retry:hover { text-decoration: underline; }
 .empty-text { margin: 0 0 4px; }
 .empty-hint { margin: 0 0 6px; color: var(--text-muted); font-size: 0.8rem; }
 .detail-panel {

@@ -6,8 +6,10 @@ import { $ } from "./dom";
 import { readStore, safeStore } from "./settings";
 import { t } from "./i18n/index";
 import { animateNum, fmtNum, fmtPct, monotoneArea, monotoneLine } from "./util";
-import { client, demoMode, homeData, homeQuery, homeSort, homeToken, setDataLoading, setHomeData, setHomeToken } from "./state";
+import { client, demoMode, homeData, homeQuery, homeSort, homeToken, setDataLoading, setHomeData, setHomeToken, sitesFailed } from "./state";
 import { emptyEl, renderHomeDemo } from "./render/cards";
+import { homeEmptyState } from "./render/home-empty";
+import { retrySites } from "./bridge/sites-helpers";
 
 function homeWindow() {
 	const end = new Date();
@@ -190,7 +192,12 @@ export function renderHome() {
 	});
 	if (!items.length) {
 		[...grid.children].forEach((c) => c.remove());
-		grid.appendChild(emptyEl(t("home.noResults")));
+		const empty = homeEmptyState(items.length, !!q, sitesFailed);
+		if (!empty) return;
+		grid.appendChild(emptyEl(
+			t(empty.key),
+			empty.retry ? { label: t("err.retry"), onClick: () => { retrySites(); } } : undefined,
+		));
 		return;
 	}
 	// Refresco en caliente: se reutilizan las tarjetas existentes (cabecera

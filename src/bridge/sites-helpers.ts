@@ -7,7 +7,7 @@ import { allowedSiteIDs, client, config, currentPreset, currentSite, demoMode, h
 import { emptyEl } from "../render/cards";
 import { loadHome, syncTopbarHeight } from "../home";
 import { syncRealtime } from "../params";
-import { SERVICE_SUBDOMAINS, SITE_FAVICONS, siteColorIndex } from "../sites";
+import { loadSiteSelector, SERVICE_SUBDOMAINS, SITE_FAVICONS, siteColorIndex } from "../sites";
 import { siteBaseUrl } from "../security";
 
 function displayDomain(cname: any) {
@@ -84,6 +84,13 @@ export function showHome() {
 	updateBackButton();
 	renderSiteSwitch();
 	syncTopbarHeight();
+	// Un /api/v0/sites fallido dejaba sitesList vacía y el home en blanco hasta
+	// recargar el navegador (issue #75): al volver al home se reintenta la carga
+	// de la lista en lugar de pintar un grid vacío.
+	if (!demoMode && client && !sitesList.length) {
+		loadSiteSelector().then(() => { renderSiteSwitch(); loadHome(); });
+		return;
+	}
 	loadHome();
 }
 export function showDashboard() {
@@ -192,6 +199,12 @@ export function renderSiteSwitch() {
 		frag.appendChild(b);
 	});
 	nav.appendChild(frag);
+}
+export async function retrySites() {
+	if (demoMode || !client) { renderSiteSwitch(); return; }
+	await loadSiteSelector();
+	renderSiteSwitch();
+	loadHome(true);
 }
 export function closeSiteSwitch() {
 	const m = $("#site-switch-menu");

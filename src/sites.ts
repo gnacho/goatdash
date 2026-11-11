@@ -4,7 +4,7 @@ import { $ } from "./dom";
 import { STORAGE_KEY, safeStore } from "./settings";
 import { t } from "./i18n/index";
 import { getDateRange } from "./datetime";
-import { allowedSiteIDs, client, config, currentPreset, currentSite, customEnd, customStart, demoMode, precacheToken, setCurrentSite, setPrecacheToken, setSettingsSiteId, setSitesList, settingsSiteId, sitesList } from "./state";
+import { allowedSiteIDs, client, config, currentPreset, currentSite, customEnd, customStart, demoMode, precacheToken, setCurrentSite, setPrecacheToken, setSettingsSiteId, setSitesFailed, setSitesList, settingsSiteId, sitesList } from "./state";
 import { buildEndpointSet } from "./endpoints";
 import { cacheKeyFor } from "./cache";
 
@@ -181,6 +181,7 @@ export async function loadSiteSelector() {
 	try {
 		const data = await client.request("/api/v0/sites", { forceRefresh: true, site: null });
 		setSitesList((data && data.sites) || []);
+		setSitesFailed(false);
 		const scope: Set<number> | null = allowedSiteIDs;
 if (scope) setSitesList(sitesList.filter((s: any) => scope.has(s.id)));
 		// Orden alfabético por el nombre visible (issue #37), aplicado tras el
@@ -192,7 +193,12 @@ if (scope) setSitesList(sitesList.filter((s: any) => scope.has(s.id)));
 			String(a.cname || "").localeCompare(String(b.cname || ""))
 		);
 	} catch {
-		setSitesList([]);
+		// Un fallo puntual (red, 5xx, rate-limit) no debe vaciar una lista que
+		// ya teníamos: si la había, se conserva y el dashboard sigue usable.
+		// Solo cuando no hay nada que enseñar se marca el fallo, para que el
+		// home muestre "no se pudo cargar" con un botón de reintento en vez
+		// del mensaje de búsqueda sin resultados (issue #75).
+		if (!sitesList.length) setSitesFailed(true);
 	}
 	if (allowedSiteIDs && currentSite && !sitesList.some((s) => s.cname === currentSite)) {
 		// El sitio guardado ya no lo permite este token: volver a la cuenta.
