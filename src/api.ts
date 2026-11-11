@@ -149,7 +149,11 @@ export class APIClient {
 			let body: any;
 			try { body = await res.json(); } catch { body = null; }
 			const msg = body && body.error ? body.error : t("err.req", { status: res.status });
-			throw new Error(msg);
+			const err = new Error(msg) as APIError;
+			// 5xx: fallo del proxy o del servidor, casi siempre transitorio.
+			// Se marca para que las lecturas se reintenten (issue #75).
+			if (res.status >= 500) err.kind = "server";
+			throw err;
 		}
 		return res.json();
 	}
@@ -246,7 +250,8 @@ export class APIClient {
 					return data;
 				} catch (e: any) {
 					lastErr = e;
-					const retriable = e instanceof TypeError || e.kind === "rate" || e.kind === "timeout";
+					const retriable = e instanceof TypeError || e.kind === "rate" || e.kind === "timeout"
+						|| (!isWrite && e.kind === "server");
 					if (!retriable || attempt === retries) break;
 					await new Promise((r) => setTimeout(r, Math.min(this._backoff(e, attempt), RATE_WAIT_CAP_MS)));
 				}

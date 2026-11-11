@@ -11,6 +11,7 @@ export let demoMode = false;
 export let demoPreset = "30d";
 export let currentSite: string | null = null;   // selector de sitio: cname o null (cuenta/Host)
 export let sitesList: any[] = [];       // [{id, cname}] from /api/v0/sites
+export let sitesFailed = false;         // la última carga de /api/v0/sites falló y no hay lista
 export let allowedSiteIDs: Set<number> | null = null; // Set de site_id permitidos por el token ([−1] o ausente = todos)
 export let theme = readStore(THEME_KEY) || "dark";
 export let autoRefreshSec = readAutoRefreshPref();
@@ -75,6 +76,7 @@ export function setDemoMode(value: any) { demoMode = value; }
 export function setDemoPreset(value: any) { demoPreset = value; }
 export function setCurrentSite(value: any) { currentSite = value; }
 export function setSitesList(value: any) { sitesList = value; }
+export function setSitesFailed(value: any) { sitesFailed = value; }
 export function setAllowedSiteIDs(value: any) { allowedSiteIDs = value; }
 export function setTheme(value: any) { theme = value; }
 export function setAutoRefreshSec(value: any) { autoRefreshSec = value; }
