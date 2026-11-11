@@ -1,7 +1,7 @@
 {
   "name": "goatdash",
   "private": true,
-  "version": "1.0.28",
+  "version": "1.0.29",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
