@@ -83,6 +83,14 @@ goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcount
   <img alt="Choropleth world map shaded by visit count next to a list of top countries" src="assets/geo-en-light.png" width="800">
 </picture>
 
+**Top pages: the expanded content panel with every tracked path**
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-pages-en-dark.webp">
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshot-pages-en-light.webp">
+  <img alt="Expanded content panel listing the 21 top pages of the site with title, share bar, hit count and percentage, plus two event rows with an EVENT badge and a campaigns section below" src="assets/screenshot-pages-en-light.webp" width="420">
+</picture>
+
 ## What to expect?
 
 This is a personal project that I use every day, not a product. It is AGPL-3.0, and I answer issues and PRs at my own pace, with no SLA. With contributions or support it might grow faster, but I cannot promise anything.
