@@ -80,6 +80,14 @@ goatdash es un dashboard respetuoso con la privacidad para la analítica de [Goa
   <img alt="Mapa mundial coroplético sombreado por número de visitas junto a la lista de países principales" src="assets/geo-es-light.png" width="800">
 </picture>
 
+**Rutas: el panel de contenido expandido con todas las rutas registradas**
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-pages-es-dark.webp">
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshot-pages-es-light.webp">
+  <img alt="Panel de contenido expandido con las 21 rutas más visitadas del sitio, con título, barra de proporción, número de visitas y porcentaje, dos filas con la insignia EVENTO y la sección de campañas debajo" src="assets/screenshot-pages-es-light.webp" width="420">
+</picture>
+
 ## ¿Qué debes esperar?
 
 Es un proyecto personal que uso a diario, no un producto. Es AGPL-3.0 y contesto issues y PRs a mi ritmo, sin SLA. Con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada.
