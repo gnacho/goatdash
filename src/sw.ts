@@ -34,7 +34,7 @@ interface SWFetchEvent extends Event {
 	respondWith(response: Promise<Response> | Response): void;
 }
 const swSelf = self as unknown as SWSelf;
-const CACHE = "goatdash-v51";
+const CACHE = "goatdash-v52";
 const SHELL = ["/", "/index.html", "/styles.css", "/theme.js", "/app.js", "/update-check.js", "/version.json"];
 
 self.addEventListener("install", ((e: SWLifecycleEvent) => {
@@ -95,6 +95,9 @@ self.addEventListener("fetch", ((e: SWFetchEvent) => {
 	const url = new URL(e.request.url);
 	if (e.request.method !== "GET" || url.origin !== location.origin) return; // API cross-origin: fuera
 	if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/count")) return;
+	// El manifest fuera de la caché del SW: Chrome debe leer siempre el actual
+	// (start_url, iconos, display) sin esperar a que expire una copia vieja.
+	if (url.pathname === "/manifest.webmanifest") return;
 
 	// Navegación (el documento HTML): caché al instante + revalidación en background.
 	if (e.request.mode === "navigate" || url.pathname === "/" || url.pathname === "/index.html") {
