@@ -15,6 +15,7 @@ import { refreshTokenScope } from "./sites";
 import { enterDemoMode, injectDemoTracker, isDemoHost, loadFixtures } from "./demo";
 import { initConnect } from "./connect";
 import { initControls } from "./controls";
+import { initInstall } from "./install";
 import { markBooted, showBootError } from "./boot-status";
 
 export function boot() {
@@ -29,6 +30,7 @@ export function boot() {
 			if (lang === "auto") applyLang();
 		});
 		initControls();
+		initInstall();
 		initPathFilter();
 		initCardTabs();
 		initExpand();
