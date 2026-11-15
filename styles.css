@@ -128,6 +128,12 @@ body { min-height: 100vh; }
 	padding: 18px 24px;
 	border-bottom: 1px solid var(--border);
 }
+.connect-head-right {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+.connect-install { font-size: 0.85rem; white-space: nowrap; }
 .connect-main {
 	flex: 1;
 	display: grid;
@@ -535,6 +541,14 @@ body { min-height: 100vh; }
 }
 .menu-item:hover { background: var(--bg-elev2); }
 .menu-item.danger { color: var(--danger); }
+/* Pista de instalación (iOS no tiene prompt): texto, no acción. */
+.menu-note {
+	padding: 8px 12px;
+	max-width: 250px;
+	font-size: 0.8rem;
+	line-height: 1.35;
+	color: var(--text-muted);
+}
 
 /* ---------- User chip (abre el menú de ajustes) ---------- */
 .user-chip {
