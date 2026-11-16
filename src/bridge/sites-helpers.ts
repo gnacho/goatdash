@@ -233,6 +233,8 @@ export function onSiteChange(cname: any) {
 		const input = $("#path-filter-input") as HTMLInputElement | null;
 		if (input) input.value = "";
 	}
+	const eventBtn = $("#event-filter-btn");
+	if (eventBtn) { eventBtn.setAttribute("aria-pressed", "false"); eventBtn.classList.remove("active"); }
 	pathsCache.clear();
 	// Cancela el precache en curso: el sitio clicado tiene prioridad.
 	if (precacheToken) precacheToken.cancelled = true;

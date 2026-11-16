@@ -33,6 +33,7 @@ type I18nKey = string;
 	badge?: (i: any) => string | null;
 	isSelected?: (i: any) => boolean;
 	rowTitle?: ((i: any) => string) | null;
+	link?: ((i: any) => string | null) | null;
 }
 
 export interface UpdateCheckResult {

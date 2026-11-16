@@ -2,6 +2,7 @@
 import { deriveTokenScope, homeSiteList, legibleSiteName, siteDomain } from "./bridge/sites-helpers";
 import { $ } from "./dom";
 import { STORAGE_KEY, safeStore } from "./settings";
+import { normalizeLinkDomain } from "./link-domain";
 import { t } from "./i18n/index";
 import { getDateRange } from "./datetime";
 import { allowedSiteIDs, client, config, currentPreset, currentSite, customEnd, customStart, demoMode, precacheToken, setCurrentSite, setPrecacheToken, setSettingsSiteId, setSitesFailed, setSitesList, settingsSiteId, sitesList } from "./state";
@@ -113,11 +114,13 @@ function fillSettingsForm(site: any) {
 			fs.appendChild(label);
 		});
 	}
+	const ld = $("#settings-link-domain") as HTMLInputElement | null;
+	if (ld) ld.value = String((site && site.link_domain) || "");
 	const ips = $("#settings-ignore-ips") as HTMLInputElement | null;
 	if (ips) ips.value = (s.ignore_ips || []).join("\n");
 	const ret = $("#settings-retention") as HTMLInputElement | null;
 	if (ret) ret.value = String(Number(s.data_retention || 0));
-	[ips, ret].forEach((el) => { if (el) el.disabled = !canWrite; });
+	[ld, ips, ret].forEach((el) => { if (el) el.disabled = !canWrite; });
 	const saveBtn = $("#settings-save") as HTMLButtonElement;
 	if (saveBtn) { saveBtn.hidden = !canWrite; saveBtn.disabled = false; }
 	const ro = $("#settings-readonly") as HTMLElement;
@@ -137,7 +140,8 @@ export async function saveSiteSettings(e: any) {
 	collect |= Number((cur && cur.settings && cur.settings.collect) || 0) & ~COLLECT_MASK;
 	const ipsRaw = (($("#settings-ignore-ips") as HTMLInputElement).value || "").split(/[\n,]+/).map((x: any) => x.trim()).filter(Boolean);
 	const retention = Math.max(0, parseInt(($("#settings-retention") as HTMLInputElement).value, 10) || 0);
-	const body = { settings: { collect, ignore_ips: ipsRaw, data_retention: retention } };
+	const linkDomain = normalizeLinkDomain(($("#settings-link-domain") as HTMLInputElement | null)?.value);
+	const body = { link_domain: linkDomain, settings: { collect, ignore_ips: ipsRaw, data_retention: retention } };
 	const saveBtn = $("#settings-save") as HTMLButtonElement;
 	if (saveBtn) saveBtn.disabled = true;
 	try {

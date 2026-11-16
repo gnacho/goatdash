@@ -41,12 +41,13 @@ goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcount
 - **Per-token site scope**: the home lists only the sites the API key is allowed to read (`token.sites` from `/api/v0/me`), so each key can be restricted to a subset of sites.
 - **Site precache**: after the active site loads, goatdash warms the cache for the other sites in the background, so switching sites is almost instant. It only fetches the essential endpoints and cancels if you switch.
 - **Five KPI cards**: unique visitors (with trend vs the previous period), pageviews, top page, tracked paths and total events, in a gapless grid.
-- **Top referrers by channel**: global referrers grouped into direct, search engines, campaigns and other sites, with a drill-down from each referrer to the pages it brought.
+- **Top referrers by channel**: global referrers grouped into direct, search engines, campaigns and other sites, with a drill-down from each referrer to the pages it brought. Rows with an HTTP referrer keep a link to the source page.
 - **Drill-down on every card**: pages to their referrers, browsers/systems/devices to versions, countries to regions, campaigns to their referrer URLs.
 - **Choropleth world map**: countries shaded by visits with a square-root scale so small markets stay visible, plus hover tooltips, a gradient legend, zoom, pan and reset.
 - **Grouped panels with tabs**: Sources (referrers/languages), Content (pages/campaigns), Devices (browsers/systems/sizes) and Location (map/list) live in four tabbed cards on a 6-column grid (devices 1/3, location 2/3), each expandable to a full-screen modal.
 - **Rich date picker**: today, yesterday, realtime (60s auto-refresh with LIVE badge), 7d, 30d, 90d, 365d, month/year to date, all time or a custom range, with automatic chart grouping and a comparison toggle that overlays the previous period (dashed line).
-- **Site settings editor**: collect flags, ignored IPs and data retention, written via `PATCH /api/v0/sites/{id}`; read-only when the API key lacks the SiteUpdate permission.
+- **Site settings editor**: the site domain, collect flags, ignored IPs and data retention, written via `PATCH /api/v0/sites/{id}`; read-only when the API key lacks the SiteUpdate permission.
+- **Event filter**: one click narrows the dashboard to the paths GoatCounter marks as events, using `include_paths` and `path_by_name`.
 - **CSV export**: one click exports the visible dataset of pages, referrers, browsers, systems, devices, location or campaigns.
 - **Tri-state theme with anti-FOUC**: dark, light or auto, from the user menu and applied before paint by an external `theme.js` script that works with a strict `default-src 'self'` CSP.
 - **Instant reloads**: a tiny service worker serves the app shell from the browser (stale-while-revalidate HTML, versioned assets cache-first), and API responses are cached per range, so a reload paints in milliseconds even on a slow connection.
