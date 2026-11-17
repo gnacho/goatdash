@@ -53,7 +53,7 @@ goatdash is a privacy-friendly dashboard for [GoatCounter](https://www.goatcount
 - **Instant reloads**: a tiny service worker serves the app shell from the browser (stale-while-revalidate HTML, versioned assets cache-first), and API responses are cached per range, so a reload paints in milliseconds even on a slow connection.
 - **Installable**: the release ships a web manifest and a service worker, so the browser installs it as an app that runs without the address bar. The menu has an install entry that uses the browser prompt, with a Share path hint on iOS.
 - **Language**: ES/EN/Auto UI, persisted in localStorage.
-- **User menu with About**: the menu opens from your user chip and shows the version (1.0.31) and a link to the source.
+- **User menu with About**: the menu opens from your user chip and shows the version (1.0.32) and a link to the source.
 - **Signed-in user in the topbar**: a chip with your avatar and email from `/api/v0/me`.
 - **Demo mode**: one click loads the full dashboard with realistic sample data, no API key needed.
 - **Polite to the API**: 60-second response cache, a small concurrent client that reads `X-Rate-Limit-Remaining` and `Retry-After` and adapts so it never exceeds the server limit, per-card retry and an "updated Xs ago" freshness indicator.
