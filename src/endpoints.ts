@@ -14,12 +14,16 @@ const ENDPOINTS = {
 	campaigns: "campaigns",
 	toprefs: "toprefs",
 };
+// El filtro de rutas vale para TODOS los endpoints de /stats (KPIs, páginas,
+// referrers, idiomas, navegadores, sistemas, tamaños, ubicaciones, campañas y
+// los paneles de detalle), así que se añade aquí una sola vez. La caché ya
+// separa por filtro (cacheNS en cache.ts), así que no hay riesgo de mezclar.
 export function endpointFor(key: any, start: any, end: any, extra = "") {
 	const iso = (d: any) => d.toISOString();
 	const q = `?start=${encodeURIComponent(iso(start))}&end=${encodeURIComponent(iso(end))}`;
 	let path = `/api/v0/stats/${(ENDPOINTS as Record<string, string>)[key]}`;
 	if (key === "hits") path += pathFilterQS() ? "?limit=100" : "?limit=20";
-	return path + (path.includes("?") ? "&" : "?") + q.replace(/^\?/, "") + extra;
+	return path + (path.includes("?") ? "&" : "?") + q.replace(/^\?/, "") + extra + pathFilterQS();
 }
 
 function pathFilterQS() {
@@ -28,11 +32,10 @@ function pathFilterQS() {
 }
 export function buildEndpointSet(range: any) {
 	const prev = getPreviousRange(range.start, range.end);
-	const f = pathFilterQS();
 	return {
-		total: endpointFor("total", range.start, range.end, f),
-		hits: endpointFor("hits", range.start, range.end, f),
-		prev: endpointFor("total", prev.start, prev.end, f),
+		total: endpointFor("total", range.start, range.end),
+		hits: endpointFor("hits", range.start, range.end),
+		prev: endpointFor("total", prev.start, prev.end),
 		languages: endpointFor("languages", range.start, range.end),
 		toprefs: endpointFor("toprefs", range.start, range.end, "&limit=50"),
 		browsers: endpointFor("browsers", range.start, range.end),
