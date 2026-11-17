@@ -41,9 +41,11 @@ goatdash es un dashboard respetuoso con la privacidad para la analítica de [Goa
 - **Alcance de sitios por token**: el home lista solo los sitios que la API key puede leer (`token.sites` de `/api/v0/me`), así que cada clave se puede restringir a un subconjunto de sitios.
 - **Precache de sitios**: tras cargar el sitio activo, goatdash calienta en segundo plano la caché del resto de sitios, así que cambiar de sitio es casi instantáneo. Solo pide los endpoints esenciales y se cancela si cambias.
 - **Cinco tarjetas de KPI**: visitantes únicos (con tendencia vs el periodo anterior), páginas vistas, página principal, rutas rastreadas y total de eventos, en una rejilla sin huecos.
-- **Referrers principales por canal**: referrers globales agrupados en directo, buscadores, campañas y otros sitios, con drill desde cada referrer a las páginas que trajo.
+- **Referrers principales por canal**: referrers globales agrupados en directo, buscadores, campañas y otros sitios, con drill desde cada referrer a las páginas que trajo. Las filas con referrer HTTP llevan un enlace a la página de origen.
 - **Drill en cada tarjeta**: de páginas a sus referrers, de navegadores/sistemas/dispositivos a versiones, de países a regiones, de campañas a sus URLs de referrer.
+- **Filtro de eventos**: un clic deja solo las rutas que GoatCounter marca como eventos, con `include_paths` y `path_by_name`.
 - **Mapa mundial coroplético**: países sombreados por visitas con escala de raíz cuadrada para que los mercados pequeños sigan visibles, tooltips, leyenda con degradado, zoom, paneo y reset.
+- **Editor de configuración del sitio**: dominio del sitio, qué se recolecta, IPs ignoradas y retención de datos, escrito con `PATCH /api/v0/sites/{id}`; en solo lectura cuando la API key no tiene el permiso SiteUpdate.
 - **Rangos flexibles**: hoy, 7d, 30d, 90d o un rango personalizado con fecha de inicio y fin.
 - **Tema tri-estado con anti-FOUC**: oscuro, claro o auto, conmutado en la topbar (botones con texto, solo iconos en móvil) y aplicado antes de pintar por un `theme.js` externo que funciona con un CSP estricto `default-src 'self'`.
 - **Recargas instantáneas**: un service worker diminuto sirve el shell de la app desde el navegador (HTML network-first para que siempre te llegue la versión desplegada, assets versionados cache-first), y las respuestas de la API se cachean por rango con stale-while-revalidate, así que una recarga pinta en milisegundos incluso con una conexión lenta.

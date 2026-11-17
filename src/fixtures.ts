@@ -26,14 +26,14 @@ window.GOATDASH_DEMO = (() => {
 		{ path: "signup", title: "Signup", weight: 2, event: true },
 	];
 
-	const DEMO_REFS: Record<string, NamedCount[]> = {
-		"/": [ { name: "news.ycombinator.com", count: 231 }, { name: "twitter.com", count: 87 }, { name: "(direct)", count: 64 }, { name: "indiehackers.com", count: 41 }, { name: "lobste.rs", count: 18 } ],
-		"/docs": [ { name: "google.com", count: 66 }, { name: "(direct)", count: 31 }, { name: "github.com", count: 12 } ],
-		"/blog/self-hosting-analytics": [ { name: "news.ycombinator.com", count: 142 }, { name: "twitter.com", count: 39 }, { name: "indiehackers.com", count: 24 } ],
-		"/pricing": [ { name: "(direct)", count: 29 }, { name: "google.com", count: 21 }, { name: "blog/self-hosting-analytics", count: 15 } ],
-		"/blog/why-we-left-google-analytics": [ { name: "news.ycombinator.com", count: 96 }, { name: "indiehackers.com", count: 22 }, { name: "lobste.rs", count: 14 } ],
-		"/about": [ { name: "(direct)", count: 17 }, { name: "github.com", count: 8 } ],
-		"/install": [ { name: "google.com", count: 23 }, { name: "(direct)", count: 11 } ],
+	const DEMO_REFS: Record<string, Array<NamedCount & { ref_scheme?: string }>> = {
+		"/": [ { name: "news.ycombinator.com", count: 231, ref_scheme: "h" }, { name: "twitter.com", count: 87, ref_scheme: "h" }, { name: "(direct)", count: 64, ref_scheme: "o" }, { name: "indiehackers.com", count: 41, ref_scheme: "h" }, { name: "lobste.rs", count: 18, ref_scheme: "h" } ],
+		"/docs": [ { name: "google.com", count: 66, ref_scheme: "h" }, { name: "(direct)", count: 31, ref_scheme: "o" }, { name: "github.com", count: 12, ref_scheme: "h" } ],
+		"/blog/self-hosting-analytics": [ { name: "news.ycombinator.com", count: 142, ref_scheme: "h" }, { name: "twitter.com", count: 39, ref_scheme: "h" }, { name: "indiehackers.com", count: 24, ref_scheme: "h" } ],
+		"/pricing": [ { name: "(direct)", count: 29, ref_scheme: "o" }, { name: "google.com", count: 21, ref_scheme: "h" }, { name: "blog/self-hosting-analytics", count: 15, ref_scheme: "o" } ],
+		"/blog/why-we-left-google-analytics": [ { name: "news.ycombinator.com", count: 96, ref_scheme: "h" }, { name: "indiehackers.com", count: 22, ref_scheme: "h" }, { name: "lobste.rs", count: 14, ref_scheme: "h" } ],
+		"/about": [ { name: "(direct)", count: 17, ref_scheme: "o" }, { name: "github.com", count: 8, ref_scheme: "h" } ],
+		"/install": [ { name: "google.com", count: 23, ref_scheme: "h" }, { name: "(direct)", count: 11, ref_scheme: "o" } ],
 	};
 
 	const DEMO_BROWSER_DETAILS: Record<string, NamedCount[]> = {

@@ -959,6 +959,25 @@ body { min-height: 100vh; }
 	opacity: 0.8;
 }
 #filter-chip-clear:hover { opacity: 1; }
+.filter-toggle {
+	flex: none;
+	font: inherit;
+	font-size: 0.72rem;
+	font-weight: 600;
+	padding: 4px 10px;
+	color: var(--text-muted);
+	background: none;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+.filter-toggle:hover { color: var(--text); border-color: var(--accent); }
+.filter-toggle.active {
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+}
 
 /* ---------- KPI cards ---------- */
 .kpi {
@@ -1192,6 +1211,16 @@ body { min-height: 100vh; }
 	border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
 	white-space: nowrap;
 }
+.list-ext {
+	flex: none;
+	color: var(--text-muted);
+	text-decoration: none;
+	font-size: 0.9rem;
+	line-height: 1;
+	padding: 2px 4px;
+	border-radius: 5px;
+}
+.list-ext:hover { color: var(--accent); background: var(--bg-elev2); }
 .ref-groups { display: flex; flex-direction: column; }
 .ref-channel-head {
 	display: flex;
@@ -1258,7 +1287,7 @@ body { min-height: 100vh; }
 .detail-back:active { transform: translateY(1px); }
 .detail-row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
 .detail-row .dname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.detail-row .dcount { font-family: var(--font-mono); font-size: 0.78rem; flex: none; }
+.detail-row .dcount { font-family: var(--font-mono); font-size: 0.78rem; flex: none; margin-left: auto; }
 .detail-err { color: var(--danger); font-size: 0.8rem; }
 
 /* ---------- Iconos inline (donas/listas) ---------- */

@@ -5,6 +5,7 @@ import { t } from "../i18n/index";
 import { client, currentSite, demoMode, demoPreset, lastDatasets, pathFilter, pathsCache, setPathFilter } from "../state";
 import { emptyEl } from "./cards";
 import { renderTopList, toggleDetail } from "./lists";
+import { eventPathNames } from "../filter-events";
 
 export function renderPages(hits: any, more?: any) {
 	renderPagesInto($("#pages-body"), hits, { more });
@@ -92,16 +93,44 @@ export function renderFilterSuggestions(suggestions: any) {
 	box.hidden = false;
 }
 
+function setEventFilterButton(on: any) {
+	const btn = $("#event-filter-btn") as HTMLButtonElement | null;
+	if (!btn) return;
+	btn.setAttribute("aria-pressed", on ? "true" : "false");
+	btn.classList.toggle("active", !!on);
+}
+
+function demoEventPaths() {
+	const data = GOATDASH_DEMO.build(demoPreset);
+	return (data.data.hits && data.data.hits.hits) || [];
+}
+
+export async function toggleEventFilter() {
+	const btn = $("#event-filter-btn") as HTMLButtonElement | null;
+	if (btn && btn.getAttribute("aria-pressed") === "true") { clearPathFilter(); return; }
+	try {
+		const paths = demoMode ? demoEventPaths() : await getAllPaths();
+		const names = eventPathNames(paths);
+		if (!names.length) { setEventFilterButton(false); return; }
+		applyPathFilter(names, t("filter.events"));
+		setEventFilterButton(true);
+	} catch {
+		setEventFilterButton(false);
+	}
+}
+
 function applyPathFilter(names: any, label: any) {
 	setPathFilter({ names, label });
 	$("#filter-chip-label").textContent = t("filter.applied", { q: label });
 	$("#filter-chip").hidden = false;
+	setEventFilterButton(false);
 	loadData();
 }
 export function clearPathFilter() {
 	setPathFilter(null);
 	$("#filter-chip").hidden = true;
 	($("#path-filter-input") as HTMLInputElement).value = "";
+	setEventFilterButton(false);
 	loadData();
 }
 export async function applyEnterFilter(q: any) {

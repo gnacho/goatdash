@@ -6,14 +6,14 @@
 <title>Goatdash</title>
 <meta name="description" content="A privacy-friendly dashboard for GoatCounter analytics. No cookies, no tracking, no servers.">
 <meta name="theme-color" content="#0d1117">
-<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=81">
-<link rel="manifest" href="manifest.webmanifest?v=81">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=81">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg?v=83">
+<link rel="manifest" href="manifest.webmanifest?v=83">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=83">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Goatdash">
-<link rel="stylesheet" href="styles.css?v=81">
-<script src="theme.js?v=81"></script>
+<link rel="stylesheet" href="styles.css?v=83">
+<script src="theme.js?v=83"></script>
 </head>
 <body>
 <div id="update-banner" class="update-banner" hidden>
@@ -253,6 +253,7 @@
 									<input type="text" id="path-filter-input" autocomplete="off" spellcheck="false" aria-label="Filtrar por ruta">
 									<div class="filter-suggest" id="filter-suggest" hidden></div>
 								</div>
+								<button type="button" id="event-filter-btn" class="filter-toggle" aria-pressed="false" data-i18n="filter.events">Solo eventos</button>
 								<div class="filter-chip" id="filter-chip" hidden>
 									<span id="filter-chip-label"></span>
 									<button type="button" id="filter-chip-clear" aria-label="Quitar filtro">✕</button>
@@ -325,6 +326,11 @@
 				<legend data-i18n="settings.collect">Qué se recolecta</legend>
 			</fieldset>
 			<div class="field">
+				<label for="settings-link-domain" data-i18n="settings.linkDomain">Dominio propio</label>
+				<input type="text" id="settings-link-domain" placeholder="www.example.com" spellcheck="false">
+				<p class="field-hint" data-i18n="settings.linkDomainHint">Tu dominio, por ejemplo www.example.com. Se usa para enlazar de vuelta a tus páginas y para no contar tu propia navegación como referencia externa.</p>
+			</div>
+			<div class="field">
 				<label for="settings-ignore-ips" data-i18n="settings.ignoreIps">IPs ignoradas</label>
 				<textarea id="settings-ignore-ips" rows="3" spellcheck="false"></textarea>
 				<p class="field-hint" data-i18n="settings.ignoreIpsHint">Una IP por línea o separadas por comas. El tráfico desde estas IPs no se cuenta.</p>
@@ -353,7 +359,7 @@
 	</dialog>
 </div>
 
-<script src="app.js?v=81"></script>
-<script src="update-check.js?v=81"></script>
+<script src="app.js?v=83"></script>
+<script src="update-check.js?v=83"></script>
 </body>
 </html>

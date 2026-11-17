@@ -5,7 +5,7 @@ import { t } from "../i18n/index";
 import { chartCompare, currentPreset, demoMode, filterDebounce, homeQuery, homeSort, homeView, setChartCompare, setFilterDebounce, setHomeQuery, setSwitchQuery, switchQuery } from "../state";
 import { activateTab } from "../render/tabs";
 import { refreshTrafficChart, updateCompareUI } from "../render/chart";
-import { applyEnterFilter, clearPathFilter, demoPathSuggestions, getAllPaths, renderFilterSuggestions } from "../render/pages";
+import { applyEnterFilter, clearPathFilter, demoPathSuggestions, getAllPaths, renderFilterSuggestions, toggleEventFilter } from "../render/pages";
 import { closeExpand, openExpand } from "../render/expand";
 import { loadHome, renderHome } from "../home";
 import { closeSubmenus } from "../user";
@@ -120,6 +120,8 @@ export function initPathFilter() {
 
 	input.addEventListener("blur", () => setTimeout(() => { suggest.hidden = true; }, 150));
 	chipClear.addEventListener("click", clearPathFilter);
+	const eventBtn = $("#event-filter-btn");
+	if (eventBtn) eventBtn.addEventListener("click", toggleEventFilter);
 }
 export function initExpand() {
 	document.querySelectorAll<HTMLElement>(".expand-btn").forEach((btn) => {

@@ -12,6 +12,25 @@ import { client, currentPreset, customEnd, customStart, demoMode, highlightCode,
 import { clearTooltips, emptyEl, refEmptyEl } from "./cards";
 import { renderWorldMap } from "./worldmap";
 import { activatePanelTab } from "./tabs";
+import { referrerURL } from "./ref-url";
+
+// Enlace a la página de origen. La fila sigue abriendo el detalle al clic:
+// el ancla corta la propagación para no disparar también el drill-down.
+function externalLink(item: any, link: any) {
+	if (!link) return null;
+	const url = link(item);
+	if (!url) return null;
+	const a = document.createElement("a");
+	a.className = "list-ext";
+	a.href = url;
+	a.target = "_blank";
+	a.rel = "noopener noreferrer";
+	a.textContent = "↗";
+	a.title = t("ref.open");
+	a.setAttribute("aria-label", t("ref.open"));
+	a.addEventListener("click", (e) => e.stopPropagation());
+	return a;
+}
 
 function renderAllRows(items: any, opts: any) {
 	const frag = document.createDocumentFragment();
@@ -43,6 +62,8 @@ function renderAllRows(items: any, opts: any) {
 		const badgeTxt = opts.badge ? opts.badge(item) : null;
 		if (badgeTxt) { const bd = document.createElement("span"); bd.className = "list-badge"; bd.textContent = badgeTxt; row.appendChild(bd); }
 		row.append(barWrap, cnt, pct);
+		const ext = externalLink(item, opts.link);
+		if (ext) row.appendChild(ext);
 		if (opts.onRowClick) {
 			row.addEventListener("click", () => opts.onRowClick(item, row));
 			row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); opts.onRowClick(item, row); } });
@@ -51,7 +72,7 @@ function renderAllRows(items: any, opts: any) {
 	});
 	return frag;
 }
-export function renderTopList(container: any, items: any, { rank = true, formatName = (i: any) => i.name, nameSub = () => null, count = (i: any) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "", badge = () => null, isSelected = () => false, rowTitle = null }: TopListOpts = {}) {
+export function renderTopList(container: any, items: any, { rank = true, formatName = (i: any) => i.name, nameSub = () => null, count = (i: any) => i.count, total, max = 8, showAll = true, page, demoDetails, onRowClick, prefix = () => "", badge = () => null, isSelected = () => false, rowTitle = null, link = null }: TopListOpts = {}) {
 		// En refresco en caliente con los mismos datos (mismo idioma, items y
 		// conteos) no se toca el DOM: evita el parpadeo de la lista.
 		const topKey = currentLang() + "|" + String(total || 0) + "|" + (items || []).map((i: any) => formatName(i) + "=" + count(i)).join(",");
@@ -119,6 +140,8 @@ export function renderTopList(container: any, items: any, { rank = true, formatN
 			const badgeTxt = badge(item);
 			if (badgeTxt) { const bd = document.createElement("span"); bd.className = "list-badge"; bd.textContent = badgeTxt; row.appendChild(bd); }
 			row.append(barWrap, cnt, pct);
+			const ext = externalLink(item, link);
+			if (ext) row.appendChild(ext);
 			if (onRowClick) {
 				row.addEventListener("click", () => onRowClick(item, row));
 				row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(item, row); } });
@@ -133,7 +156,7 @@ export function renderTopList(container: any, items: any, { rank = true, formatN
 			btn.addEventListener("click", () => {
 				const c = container;
 				c.innerHTML = "";
-				c.appendChild(renderAllRows(items, { rank, formatName, nameSub, count, total: totalMax, page, onRowClick, prefix, badge, isSelected, rowTitle }));
+				c.appendChild(renderAllRows(items, { rank, formatName, nameSub, count, total: totalMax, page, onRowClick, prefix, badge, isSelected, rowTitle, link }));
 			});
 			container.appendChild(btn);
 		}
@@ -178,6 +201,7 @@ export function renderReferrersInto(body: any, stats: any, demoDetails: any, { f
 			rank: false,
 			max: full ? 0 : 8,
 			formatName: (i) => i.name || t("top.direct"),
+			link: (i) => referrerURL(i),
 			onRowClick: ch.scheme === "o" ? null : (item: any, row: any) => {
 				const demo = demoMode ? (demoDetails && demoDetails[item.name]) : null;
 				toggleDetail(row, "toprefs", item.id || item.name, item.name, { demo, kind: "stats" });
@@ -228,6 +252,10 @@ export async function toggleDetail(row: any, page: any, itemId: any, label: any,
 		name.textContent = r.name || t("top.direct");
 		const cnt = document.createElement("span"); cnt.className = "dcount"; cnt.textContent = fmtNum(r.count);
 		drow.append(name, cnt);
+		if (kind === "refs") {
+			const ext = externalLink(r, (x: any) => referrerURL(x));
+			if (ext) drow.appendChild(ext);
+		}
 		panel.appendChild(drow);
 	});
 }

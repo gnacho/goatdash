@@ -2,6 +2,8 @@
 import { deriveTokenScope, homeSiteList, legibleSiteName, siteDomain } from "./bridge/sites-helpers";
 import { $ } from "./dom";
 import { STORAGE_KEY, safeStore } from "./settings";
+import { normalizeLinkDomain } from "./link-domain";
+import { siteSettings } from "./site-settings";
 import { t } from "./i18n/index";
 import { getDateRange } from "./datetime";
 import { allowedSiteIDs, client, config, currentPreset, currentSite, customEnd, customStart, demoMode, precacheToken, setCurrentSite, setPrecacheToken, setSettingsSiteId, setSitesFailed, setSitesList, settingsSiteId, sitesList } from "./state";
@@ -68,9 +70,9 @@ export async function openSiteSettings() {
 	let site = cur.site;
 	try {
 		const fresh = await client.request("/api/v0/sites/" + cur.site.id, { site: null, forceRefresh: true, cacheKey: "s:@:site:" + cur.site.id });
-		if (fresh && fresh.settings) site = fresh;
+		if (fresh && siteSettings(fresh)) site = fresh;
 	} catch { /* nos quedamos con lo que trae la lista */ }
-	if (!site || !site.settings) {
+	if (!site || !siteSettings(site)) {
 		const saved = $("#settings-saved") as HTMLElement;
 		if (saved) {
 			saved.hidden = false;
@@ -89,7 +91,7 @@ export async function openSiteSettings() {
 }
 
 function fillSettingsForm(site: any) {
-	const s = (site && site.settings) || {};
+	const s = siteSettings(site) || {};
 	const canWrite = tokenCanWriteSettings();
 	const fs = $("#settings-collect");
 	if (fs) {
@@ -113,11 +115,13 @@ function fillSettingsForm(site: any) {
 			fs.appendChild(label);
 		});
 	}
+	const ld = $("#settings-link-domain") as HTMLInputElement | null;
+	if (ld) ld.value = String((site && site.link_domain) || "");
 	const ips = $("#settings-ignore-ips") as HTMLInputElement | null;
 	if (ips) ips.value = (s.ignore_ips || []).join("\n");
 	const ret = $("#settings-retention") as HTMLInputElement | null;
 	if (ret) ret.value = String(Number(s.data_retention || 0));
-	[ips, ret].forEach((el) => { if (el) el.disabled = !canWrite; });
+	[ld, ips, ret].forEach((el) => { if (el) el.disabled = !canWrite; });
 	const saveBtn = $("#settings-save") as HTMLButtonElement;
 	if (saveBtn) { saveBtn.hidden = !canWrite; saveBtn.disabled = false; }
 	const ro = $("#settings-readonly") as HTMLElement;
@@ -134,10 +138,12 @@ export async function saveSiteSettings(e: any) {
 	});
 	// Los bits que no editamos (p. ej. CollectHits) se conservan tal cual.
 	const cur = sitesList.find((x) => x.id === settingsSiteId);
-	collect |= Number((cur && cur.settings && cur.settings.collect) || 0) & ~COLLECT_MASK;
+	const curSettings = siteSettings(cur);
+	collect |= Number((curSettings && curSettings.collect) || 0) & ~COLLECT_MASK;
 	const ipsRaw = (($("#settings-ignore-ips") as HTMLInputElement).value || "").split(/[\n,]+/).map((x: any) => x.trim()).filter(Boolean);
 	const retention = Math.max(0, parseInt(($("#settings-retention") as HTMLInputElement).value, 10) || 0);
-	const body = { settings: { collect, ignore_ips: ipsRaw, data_retention: retention } };
+	const linkDomain = normalizeLinkDomain(($("#settings-link-domain") as HTMLInputElement | null)?.value);
+	const body = { link_domain: linkDomain, settings: { collect, ignore_ips: ipsRaw, data_retention: retention } };
 	const saveBtn = $("#settings-save") as HTMLButtonElement;
 	if (saveBtn) saveBtn.disabled = true;
 	try {
@@ -145,7 +151,7 @@ export async function saveSiteSettings(e: any) {
 			site: null, method: "PATCH", body, forceRefresh: true, cacheKey: "s:@:site:" + settingsSiteId,
 		});
 		const idx = sitesList.findIndex((x) => x.id === settingsSiteId);
-		if (idx >= 0 && updated && updated.settings) sitesList[idx] = updated;
+		if (idx >= 0 && updated && siteSettings(updated)) sitesList[idx] = updated;
 		const saved = $("#settings-saved") as HTMLElement;
 		if (saved) { saved.hidden = false; saved.classList.remove("error"); saved.textContent = t("settings.saved"); }
 		setTimeout(() => { const d = $("#settings-dialog") as HTMLDialogElement | null; if (d && d.open) d.close(); }, 900);
